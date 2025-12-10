@@ -1,31 +1,43 @@
-# 🚀 ĐỀ XUẤT ĐỀ TÀI BTL: Trợ lý AI Tra cứu Pháp luật/Quy chế (RAG Chatbot)
+# ĐỀ XUẤT ĐỀ TÀI BÀI TẬP LỚN: TRỢ LÝ AI TRA CỨU PHÁP LUẬT & QUY CHẾ (RAG SYSTEM)
 
-Chào anh em, sau khi nghiên cứu kỹ các hướng đi cho bài tập lớn lần này, mình đề xuất team chọn đề tài: **Xây dựng Hệ thống Chatbot RAG (Retrieval-Augmented Generation) cho Tiếng Việt.**
+## 1. Tên Đề tài
+**Xây dựng Hệ thống Chatbot Tra cứu Văn bản Pháp luật và Quy chế Đào tạo sử dụng Kỹ thuật RAG (Retrieval-Augmented Generation)**
 
-Dưới đây là 4 lý do cốt lõi tại sao đây là lựa chọn "Ngon - Bổ - Rẻ" nhất cho team mình lúc này:
+## 2. Đặt vấn đề và Tính cấp thiết
+Hiện nay, việc tra cứu thông tin trong các văn bản quy phạm pháp luật hoặc quy chế nội bộ (Sổ tay sinh viên, Quy chế đào tạo) gặp nhiều khó khăn:
+* **Công cụ tìm kiếm từ khóa (Keyword Search)** truyền thống thường trả về quá nhiều kết quả không liên quan hoặc đòi hỏi người dùng phải biết chính xác từ khóa chuyên ngành.
+* **Các mô hình ngôn ngữ lớn (LLM)** như ChatGPT có khả năng trả lời tự nhiên nhưng thường xuyên gặp lỗi "ảo giác" (hallucination) - tự bịa đặt thông tin sai lệch, hoặc thiếu kiến thức về các dữ liệu nội bộ/dữ liệu mới cập nhật.
 
-## 1. Giải quyết vấn đề "Ảo giác" của ChatGPT (Điểm cộng về tính ứng dụng)
-* [cite_start]**Vấn đề:** Các mô hình như ChatGPT thường chém gió lung tung (hallucination) và không biết về các tài liệu nội bộ (ví dụ: Quy chế trường mình, hay các luật mới nhất)[cite: 97, 98].
-* **Giải pháp của chúng ta:** Sử dụng kỹ thuật **RAG**. Hệ thống sẽ tìm kiếm thông tin trong kho dữ liệu PDF mà ta cung cấp, sau đó mới trả lời.
-* **Điểm "Wow" khi bảo vệ:** Chatbot của ta có khả năng **Trích dẫn nguồn** (Citation). Ví dụ: *"Thông tin này nằm ở Điều 5, Khoản 2..."*. [cite_start]Đây là tính năng "sát thủ" để chứng minh độ tin cậy[cite: 128].
+**Giải pháp:** Ứng dụng kỹ thuật **RAG (Retrieval-Augmented Generation)** để kết hợp khả năng tìm kiếm chính xác của máy tính với khả năng diễn đạt ngôn ngữ tự nhiên của AI, đảm bảo câu trả lời luôn có căn cứ và trích dẫn nguồn rõ ràng.
 
-## 2. Công nghệ "Hot Trend" 2024-2025 nhưng KHÔNG cần GPU khủng
-* [cite_start]Khác với Computer Vision (như đề tài nhận diện mũ bảo hiểm PPE) cần GPU mạnh để train/fine-tune rất cực khổ[cite: 11, 42], đề tài RAG tập trung vào kiến trúc hệ thống.
-* [cite_start]Chúng ta có thể chạy **local** trên máy cá nhân hoặc **Google Colab** nhẹ nhàng vì chủ yếu gọi API[cite: 117].
-* [cite_start]Đây là cơ hội để anh em tiếp cận các từ khóa tuyển dụng hot nhất hiện nay: **Vector Database (ChromaDB), LangChain, Embedding, Prompt Engineering**[cite: 101, 112].
+## 3. Mục tiêu Đề tài
+* Xây dựng được pipeline xử lý dữ liệu văn bản Tiếng Việt (PDF/Docx) tự động.
+* Tạo ra hệ thống Chatbot có khả năng trả lời câu hỏi dựa trên ngữ cảnh tài liệu cung cấp.
+* **Tính năng cốt lõi:** Câu trả lời phải đi kèm **Trích dẫn nguồn (Citation)** (Ví dụ: *Thông tin này được quy định tại Điều 5, Khoản 2 của Văn bản X*).
 
-## 3. Chi phí bằng 0 - Tốc độ cực nhanh
-* [cite_start]Thay vì tốn tiền mua API OpenAI, ta sẽ dùng **Gemini API** (đang miễn phí gói Flash/Pro) hoặc **Groq API** chạy Llama 3[cite: 123, 124].
-* [cite_start]Groq giúp demo chạy "nhanh như điện", tạo ấn tượng cực mạnh về độ mượt mà khi thuyết trình[cite: 124].
+## 4. Phương pháp và Công nghệ Triển khai
 
-## 4. Phân chia công việc rõ ràng, dễ làm việc nhóm
-Đề tài này rất dễ tách module để anh em cùng làm song song mà không dẫm chân nhau:
-* [cite_start]**Bạn A (Data Engineer):** Thu thập PDF luật/quy chế, dùng LangChain để cắt nhỏ văn bản (Chunking) và xử lý vấn đề từ ghép tiếng Việt[cite: 115].
-* [cite_start]**Bạn B (Backend/AI):** Dựng Vector Database, viết hàm tìm kiếm (Retriever) và chọn model Embedding tiếng Việt xịn (như `bkai-foundation-models`)[cite: 108, 116].
-* **Bạn C (Frontend):** Dùng **Streamlit** hoặc Chainlit dựng giao diện chat. [cite_start]Streamlit hỗ trợ session state rất tốt để lưu lịch sử chat[cite: 157].
+### 4.1. Kiến trúc Hệ thống
+Sử dụng kiến trúc RAG tiêu chuẩn với Framework **LangChain**:
+1.  **Document Loading:** Tải và chuẩn hóa văn bản từ các file PDF/Word.
+2.  **Splitting & Chunking:** Kỹ thuật chia nhỏ văn bản thông minh (Recursive Character Splitter) để đảm bảo ngữ cảnh không bị cắt rời, tối ưu cho Tiếng Việt.
+3.  **Embedding:** Mã hóa văn bản thành vector.
+4.  **Vector Store:** Lưu trữ và truy xuất vector.
+5.  **LLM Generation:** Sinh câu trả lời từ ngữ cảnh tìm được.
 
----
-### 💡 Kết luận
-Chọn đề tài này là chọn sự **An toàn nhưng Ấn tượng**. Chúng ta không lo bị fail do model không hội tụ (như train AI truyền thống), mà vẫn có sản phẩm mang tính công nghệ cao để demo.
+### 4.2. Tech Stack Dự kiến
+* **Ngôn ngữ:** Python.
+* **Framework:** LangChain (Quản lý luồng xử lý), Streamlit (Giao diện Web Demo).
+* **Mô hình Embedding (Quan trọng):** Sử dụng các mô hình tối ưu cho Tiếng Việt như `BKAI-Foundation-models/vietnamese-bi-encoder` hoặc `PhoBERT` để đảm bảo độ chính xác khi tìm kiếm ngữ nghĩa.
+* **Vector Database:** ChromaDB hoặc FAISS (Open-source, chạy local, không tốn chi phí).
+* **Large Language Model (LLM):** * *Phương án 1:* Gemini API (Google) - Miễn phí, cửa sổ ngữ cảnh lớn.
+    * *Phương án 2:* Llama 3 qua Groq API - Tốc độ phản hồi cực nhanh (Real-time).
 
-Mọi người xem qua và chốt sớm để triển khai nhé!
+## 5. Kế hoạch Thực hiện và Kết quả Dự kiến
+* **Giai đoạn 1 (Tuần 1-2):** Thu thập dữ liệu (Sổ tay sinh viên, Luật Giáo dục, Luật Lao động...) và làm sạch dữ liệu. Xây dựng module Vector Database.
+* **Giai đoạn 2 (Tuần 3-4):** Tích hợp LangChain và LLM. Tinh chỉnh (Fine-tune) câu lệnh Prompt (Prompt Engineering) để chatbot không trả lời sai sự thật.
+* **Giai đoạn 3 (Tuần 5):** Xây dựng giao diện Streamlit. Hiển thị song song khung chat và khung xem tài liệu gốc.
+
+## 6. Giá trị Đóng góp của Đề tài
+* **Về mặt học thuật:** Minh chứng khả năng áp dụng các kỹ thuật NLP tiên tiến (Embeddings, Vector Search) cho ngôn ngữ tiếng Việt, giải quyết bài toán đặc thù về từ ghép và ngữ nghĩa.
+* **Về mặt thực tiễn:** Sản phẩm có thể ứng dụng ngay vào việc hỗ trợ giải đáp thắc mắc tự động cho Phòng Đào tạo hoặc bộ phận Hành chính Nhân sự.
