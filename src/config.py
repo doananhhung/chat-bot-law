@@ -27,11 +27,21 @@ class AppConfig:
     CHUNK_SIZE = 1000
     CHUNK_OVERLAP = 200
     
-    # LLM Config
-    LLM_MODEL_NAME = "gemini-2.5-flash"
+    # --- LLM Factory Config ---
+    # Main Generator (RAG)
+    LLM_PROVIDER = os.getenv("LLM_PROVIDER", "google") # google, ollama, etc.
+    LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "gemini-2.5-flash")
     
+    # Router (Intent Classification)
+    # Default to use the same provider/model as main if not specified
+    ROUTER_PROVIDER = os.getenv("ROUTER_PROVIDER", "google")
+    ROUTER_MODEL_NAME = os.getenv("ROUTER_MODEL_NAME", "gemini-2.5-flash")
+    
+    # Ollama Specific (for self-hosting)
+    OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+
     @classmethod
     def validate(cls):
         """Validate critical configuration."""
-        if not cls.GOOGLE_API_KEY:
-            raise ValueError("GOOGLE_API_KEY is missing. Please check your .env file.")
+        if cls.LLM_PROVIDER == "google" and not cls.GOOGLE_API_KEY:
+            raise ValueError("GOOGLE_API_KEY is missing but provider is set to 'google'. Check your .env file.")

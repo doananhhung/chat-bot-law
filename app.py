@@ -61,14 +61,10 @@ with st.sidebar:
     st.header("Quản lý Dữ liệu")
     st.info(f"Thư mục dữ liệu: `{AppConfig.RAW_DATA_PATH}`")
     
-    if st.button("🔄 Cập nhật Dữ liệu (Re-index)"):
+    if st.button("🔄 Cập nhật Dữ liệu"):
         build_index()
         
-    st.divider()
-    if not AppConfig.GOOGLE_API_KEY:
-        st.error("⚠️ Chưa cấu hình GOOGLE_API_KEY!")
-    else:
-        st.success("✅ API Key đã được cấu hình")
+ 
 
 # Main Chat
 rag_chain = get_rag_chain()
@@ -98,7 +94,7 @@ if prompt := st.chat_input("Nhập câu hỏi của bạn về văn bản pháp 
             st.error("Hệ thống chưa sẵn sàng. Vui lòng kiểm tra cấu hình hoặc Build Index.")
             response = {"answer": "Lỗi hệ thống.", "source_documents": []}
         else:
-            with st.spinner("Đang tra cứu..."):
+            with st.spinner("..."):
                 response = rag_chain.generate_answer(prompt)
                 
             st.markdown(response["answer"])

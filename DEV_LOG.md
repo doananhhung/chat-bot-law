@@ -85,3 +85,30 @@ graph TD
     C -.-> D
     C -.-> E
 ```
+
+## [2025-12-23] Task: Intent Classification & Routing (Advanced)
+### 1. Architectural Decision (ADR)
+- **Context**: Users ask off-topic questions ("Hello", "Weather"), and the system awkwardly tries to search legal docs. Also, need flexibility to use different LLMs.
+- **Decision**: Implemented a **Router-Based Architecture** with **LLM Factory Pattern**.
+    - **IntentRouter**: Uses a lightweight LLM call to classify queries as `LEGAL` or `GENERAL`.
+    - **LLMFactory**: Abstracts LLM creation, supporting multi-provider (Google, Ollama, etc.) and separating Router config from Generator config.
+- **Impact**: 
+    - Improved UX: Natural chat for off-topic queries.
+    - Extensibility: Can swap Router model to a smaller/cheaper one (e.g., local Mistral) without touching core logic.
+
+### 2. Flow Visualization (Mermaid)
+```mermaid
+%%{init: {'theme': 'default', 'themeVariables': { 'background': '#ffffff' }}}%%
+flowchart TD
+    UserQuery[User Query] --> Router[IntentRouter]
+    Router -->|Classify| LLM_Router[LLM (Router Config)]
+    LLM_Router --> Decision{Intent?}
+    
+    Decision -- GENERAL --> GeneralChain[General Chat]
+    GeneralChain -->|Skip Retrieval| FinalResponse
+    
+    Decision -- LEGAL --> RAGChain[RAG Pipeline]
+    RAGChain --> Retriever[Semantic Retriever]
+    Retriever --> Generator[Main Generator]
+    Generator --> FinalResponse
+```
