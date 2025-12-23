@@ -1,6 +1,6 @@
 from typing import List
 from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 from src.config import AppConfig
 from src.utils.logger import logger

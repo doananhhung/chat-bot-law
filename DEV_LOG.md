@@ -63,3 +63,25 @@ sequenceDiagram
 
     StreamlitUI-->>User: Display Answer + Citations
 ```
+
+## [2025-12-23] Task: LangChain Deprecation Refactor
+### 1. Technical Explanation
+- **Changes**: 
+    - **Dependency**: Switched from `sentence-transformers` to `langchain-huggingface`.
+    - **Code Refactor**: Updated `HuggingFaceEmbeddings` imports in `retriever.py` and `indexer.py` to use the new `langchain_huggingface` package.
+- **Why**: To comply with LangChain 0.2.2+ standards and prevent future breaking changes when LangChain 1.0 is released. This also removed the associated deprecation warnings in the console.
+
+### 2. Flow Visualization (Mermaid)
+```mermaid
+%%{init: {'theme': 'default', 'themeVariables': { 'background': '#ffffff' }}}%%
+graph TD
+    A[Old: langchain_community] -->|Deprecated| B(HuggingFaceEmbeddings)
+    C[New: langchain_huggingface] -->|Recommended| B
+    subgraph Files Modified
+    D[src/rag_engine/retriever.py]
+    E[src/ingestion/indexer.py]
+    F[requirements.txt]
+    end
+    C -.-> D
+    C -.-> E
+```

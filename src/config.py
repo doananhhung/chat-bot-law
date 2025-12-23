@@ -28,7 +28,7 @@ class AppConfig:
     CHUNK_OVERLAP = 200
     
     # LLM Config
-    LLM_MODEL_NAME = "gemini-pro"
+    LLM_MODEL_NAME = "gemini-2.5-flash"
     
     @classmethod
     def validate(cls):

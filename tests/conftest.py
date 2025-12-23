@@ -50,8 +50,8 @@ def dummy_pdf(test_data_dir):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
-    pdf.cell(200, 10, txt="This is a test document for unit testing.", ln=1, align='L')
-    pdf.cell(200, 10, txt="It contains legal information about AI testing.", ln=1, align='L')
+    pdf.cell(200, 10, text="This is a test document for unit testing.", ln=1, align='L')
+    pdf.cell(200, 10, text="It contains legal information about AI testing.", ln=1, align='L')
     pdf.output(str(file_path))
     
     return str(file_path)
