@@ -28,13 +28,9 @@ def test_text_splitter(dummy_pdf):
     assert chunks[0].metadata["source"] == "test_doc.pdf"
 
 def test_vector_indexer(dummy_pdf):
-    """Test creating vector index."""
-    # Load & Split
-    load_result = DocumentLoader.load_documents(AppConfig.RAW_DATA_PATH)
-    chunks = TextSplitter.split_documents(load_result.documents)
-    
-    # Index
-    VectorIndexer.build_index(chunks)
+    """Test creating vector index using incremental sync."""
+    # Index (sync_index handles everything)
+    VectorIndexer.sync_index()
     
     # Check if index file exists
     index_path = os.path.join(AppConfig.VECTOR_DB_PATH, "index.faiss")

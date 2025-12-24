@@ -30,12 +30,12 @@ class AppConfig:
     # --- LLM Factory Config ---
     # Main Generator (RAG)
     LLM_PROVIDER = os.getenv("LLM_PROVIDER", "google") # google, ollama, etc.
-    LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "gemini-2.5-flash")
+    LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "gemini-2.5-flash-lite")
     
     # Router (Intent Classification)
     # Default to use the same provider/model as main if not specified
     ROUTER_PROVIDER = os.getenv("ROUTER_PROVIDER", "google")
-    ROUTER_MODEL_NAME = os.getenv("ROUTER_MODEL_NAME", "gemini-2.5-flash")
+    ROUTER_MODEL_NAME = os.getenv("ROUTER_MODEL_NAME", "gemini-2.5-flash-lite")
     
     # Ollama Specific (for self-hosting)
     OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")

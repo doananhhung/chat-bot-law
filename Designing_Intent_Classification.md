@@ -76,7 +76,7 @@ Chúng ta sẽ quản lý cấu hình theo cặp `PROVIDER` và `MODEL_NAME` cho
     *   `LLM_MODEL_NAME`: "gemini-pro"
 *   **Router (Intent Classification)**:
     *   `ROUTER_PROVIDER`: "google" (hoặc "ollama", "openai"...)
-    *   `ROUTER_MODEL_NAME`: "gemini-1.5-flash" (hoặc "mistral", "llama3"...)
+    *   `ROUTER_MODEL_NAME`: "gemini-2.5-flash" (hoặc "mistral", "llama3"...)
 
 ### B. LLM Factory (`src/rag_engine/llm_factory.py`)
 Tạo một module mới chịu trách nhiệm khởi tạo đối tượng LLM chính xác:

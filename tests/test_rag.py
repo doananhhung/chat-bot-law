@@ -10,9 +10,7 @@ from src.config import AppConfig
 @pytest.fixture(scope="module")
 def initialized_index(test_data_dir, dummy_pdf):
     """Ensure index exists for retriever tests."""
-    load_result = DocumentLoader.load_documents(AppConfig.RAW_DATA_PATH)
-    chunks = TextSplitter.split_documents(load_result.documents)
-    VectorIndexer.build_index(chunks)
+    VectorIndexer.sync_index()
     return True
 
 def test_retriever_initialization(initialized_index):
@@ -29,21 +27,23 @@ def test_retriever_search(initialized_index):
     assert len(docs) > 0
     assert "test document" in docs[0].page_content.lower()
 
-@patch("src.rag_engine.generator.ChatGoogleGenerativeAI")
-def test_rag_generation(mock_llm_class, initialized_index):
+@patch("src.rag_engine.generator.LLMFactory.create_llm")
+def test_rag_generation(mock_create_llm, initialized_index):
     """Test RAG generation flow (mocking the chain execution)."""
-    # Setup Mock LLM to avoid instantiation issues, though we will mock the chain itself
-    mock_llm_instance = MagicMock()
-    mock_llm_class.return_value = mock_llm_instance
+    # Setup Mock LLM
+    mock_llm = MagicMock()
+    mock_create_llm.return_value = mock_llm
     
     # Initialize
     retriever = SemanticRetriever()
     rag_chain = RAGChain(retriever)
     
-    # Mock the internal chain's invoke method
-    # generate_answer calls self.chain.invoke({"context": ..., "question": ...})
-    rag_chain.chain = MagicMock()
-    rag_chain.chain.invoke.return_value = "Đây là câu trả lời test."
+    # Mock the internal router to always return LEGAL
+    rag_chain.router.classify = MagicMock(return_value="LEGAL")
+    
+    # Mock the internal qa_chain's invoke method
+    rag_chain.qa_chain = MagicMock()
+    rag_chain.qa_chain.invoke.return_value = "Đây là câu trả lời test."
     
     result = rag_chain.generate_answer("Test question")
     

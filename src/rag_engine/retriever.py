@@ -31,7 +31,7 @@ class SemanticRetriever:
             # For now, let's raise so the app knows it's not ready
             raise RuntimeError("Vector Store not found. Please run ingestion first.")
 
-    def get_relevant_docs(self, query: str, k: int = 4) -> List[Document]:
+    def get_relevant_docs(self, query: str, k: int = 10) -> List[Document]:
         """
         Retrieve top k relevant documents for the query.
         """

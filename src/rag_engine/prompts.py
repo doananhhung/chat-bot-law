@@ -2,7 +2,7 @@ from typing import List
 from langchain_core.documents import Document
 from langchain_core.prompts import PromptTemplate
 
-QA_SYSTEM_PROMPT = """Bạn là trợ lý pháp luật AI chuyên về luật Việt Nam. 
+QA_SYSTEM_PROMPT = """Bạn là trợ lý pháp luật AI chuyên về luật lao động Việt Nam. 
 Nhiệm vụ của bạn là trả lời câu hỏi DỰA TRÊN các tài liệu được cung cấp.
 
 NGUYÊN TẮC BẮT BUỘC:
@@ -26,7 +26,7 @@ QA_PROMPT = PromptTemplate.from_template(
     QA_SYSTEM_PROMPT + "\n\n" + QA_USER_PROMPT_TEMPLATE_STR
 )
 
-GENERAL_SYSTEM_PROMPT = """Bạn là Trợ lý Pháp luật AI chuyên về luật Việt Nam.
+GENERAL_SYSTEM_PROMPT = """Bạn là Trợ lý Pháp luật AI chuyên về luật lao động Việt Nam.
 Người dùng vừa đưa ra một câu hỏi hoặc câu chào xã giao không liên quan trực tiếp đến chuyên môn pháp lý của bạn.
 
 Nhiệm vụ:
@@ -50,7 +50,14 @@ def format_context(documents: List[Document]) -> str:
     
     for i, doc in enumerate(documents, 1):
         source = doc.metadata.get("source", "Unknown")
-        page = doc.metadata.get("page", "N/A")
+        raw_page = doc.metadata.get("page", "N/A")
+        
+        # Convert 0-based page index to 1-based for LLM context
+        try:
+            page = int(raw_page) + 1
+        except (ValueError, TypeError):
+            page = raw_page
+
         content = doc.page_content.strip()
         
         context_parts.append(

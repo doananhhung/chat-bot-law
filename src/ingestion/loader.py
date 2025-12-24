@@ -21,6 +21,39 @@ class DocumentLoader:
     }
     
     @staticmethod
+    def load_single_file(file_path: str) -> List[Document]:
+        """
+        Load a single supported document.
+        """
+        path_obj = Path(file_path)
+        if not path_obj.exists() or not path_obj.is_file():
+            logger.warning(f"File not found: {file_path}")
+            return []
+            
+        ext = path_obj.suffix.lower()
+        if ext not in DocumentLoader.SUPPORTED_EXTENSIONS:
+            logger.debug(f"Skipping unsupported file: {path_obj.name}")
+            return []
+            
+        loader_cls = DocumentLoader.SUPPORTED_EXTENSIONS[ext]
+        try:
+            logger.info(f"Loading file: {path_obj.name}")
+            loader = loader_cls(str(path_obj))
+            docs = loader.load()
+            
+            # Enhance metadata
+            for doc in docs:
+                doc.metadata["source"] = path_obj.name
+                if "page" not in doc.metadata:
+                    doc.metadata["page"] = 0
+            
+            return docs
+            
+        except Exception as e:
+            logger.error(f"Failed to load {path_obj.name}: {str(e)}")
+            return []
+
+    @staticmethod
     def load_documents(directory_path: str) -> LoadResult:
         """
         Load all supported documents from the specified directory.

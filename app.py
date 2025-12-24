@@ -9,38 +9,25 @@ from src.ingestion.indexer import VectorIndexer
 from src.utils.logger import logger
 
 # Page Config
-st.set_page_config(page_title="Trợ lý Pháp Luật AI", layout="wide")
+st.set_page_config(page_title="Trợ lý Luật Lao Động AI", layout="wide")
 
 # Session State Initialization
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
 def build_index():
-    """Run the ingestion pipeline."""
+    """Run the incremental ingestion pipeline."""
     try:
-        with st.status("Đang xử lý dữ liệu...", expanded=True) as status:
-            st.write("Đang đọc tài liệu...")
-            load_result = DocumentLoader.load_documents(AppConfig.RAW_DATA_PATH)
+        with st.status("Đang đồng bộ dữ liệu...", expanded=True) as status:
+            st.write("Đang quét thư mục và kiểm tra thay đổi...")
+            VectorIndexer.sync_index()
             
-            if not load_result.documents:
-                status.update(label="Không tìm thấy tài liệu!", state="error")
-                return
-                
-            st.write(f"Đã đọc {len(load_result.documents)} trang/file.")
-            
-            st.write("Đang chia nhỏ văn bản...")
-            chunks = TextSplitter.split_documents(load_result.documents)
-            st.write(f"Đã tạo {len(chunks)} phân đoạn.")
-            
-            st.write("Đang tạo Vector Index (Điều này có thể mất vài phút)...")
-            VectorIndexer.build_index(chunks)
-            
-            status.update(label="Xử lý dữ liệu thành công!", state="complete")
-            st.success("Hệ thống đã sẵn sàng!")
+            status.update(label="Đồng bộ dữ liệu thành công!", state="complete")
+            st.success("Hệ thống đã cập nhật những thay đổi mới nhất!")
             time.sleep(1)
             st.rerun()
     except Exception as e:
-        st.error(f"Lỗi hệ thống: {str(e)}")
+        st.error(f"Lỗi khi đồng bộ dữ liệu: {str(e)}")
 
 def get_rag_chain():
     """Initialize RAG Chain (Cached in resource is not possible with custom classes easily, use session state)."""
@@ -78,7 +65,11 @@ for msg in st.session_state.chat_history:
                 for doc in msg["sources"]:
                     source = doc.metadata.get("source", "Unknown")
                     page = doc.metadata.get("page", "N/A")
-                    st.caption(f"📄 **{source}** (Trang {page})")
+                    try:
+                        page_display = int(page) + 1
+                    except (ValueError, TypeError):
+                        page_display = page
+                    st.caption(f"📄 **{source}** (Trang {page_display})")
                     st.text(doc.page_content[:300] + "...")
 
 # Chat Input
@@ -105,7 +96,11 @@ if prompt := st.chat_input("Nhập câu hỏi của bạn về văn bản pháp 
                     for doc in response["source_documents"]:
                         source = doc.metadata.get("source", "Unknown")
                         page = doc.metadata.get("page", "N/A")
-                        st.caption(f"📄 **{source}** (Trang {page})")
+                        try:
+                            page_display = int(page) + 1
+                        except (ValueError, TypeError):
+                            page_display = page
+                        st.caption(f"📄 **{source}** (Trang {page_display})")
                         st.text(doc.page_content[:300] + "...")
 
     # Save history
