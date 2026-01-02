@@ -179,3 +179,55 @@ sequenceDiagram
 - **Root Cause**: `PyPDFLoader` uses 0-based indexing. `app.py` was patched to display `page+1`, but `format_context` in `prompts.py` was still feeding the raw 0-based index to the LLM. The LLM was faithfully citing what it was told.
 - **Fix**: Updated `src/rag_engine/prompts.py` to increment the page number by 1 within `format_context` before generating the context string.
 - **Verification**: Code review confirms `page = int(raw_page) + 1` logic is now applied in the prompt generation flow.
+
+## [2026-01-02] Task: Prompt Engineering & Structured Reasoning
+
+### 1. Architectural Decision (ADR)
+
+- **Context**: Previous responses were flat and lacked professional legal depth. AI sometimes struggled to synthesize multiple sources effectively.
+
+- **Decision**: Implemented **Structured Persona & IRAC Reasoning**.
+
+    - **Persona**: Upgraded from "Assistant" to "Senior Legal Consultant" (Cố vấn pháp lý cấp cao).
+
+    - **Strategy**: Introduced **Chain-of-Thought (CoT)** instructions in the System Prompt.
+
+    - **Structure**: Enforced **IRAC** (Issue, Rule, Analysis, Conclusion) format in the User Prompt template to ensure logical flow.
+
+- **Impact**: 
+
+    - Responses are now structured with distinct "Legal Basis", "Analysis", and "Conclusion" sections.
+
+    - Improved citation reliability through explicit placement rules.
+
+    - Enhanced professional tone suitable for legal consulting.
+
+
+
+### 2. Flow Visualization (Mermaid)
+
+```mermaid
+
+%%{init: {'theme': 'default', 'themeVariables': { 'background': '#ffffff' }}}%%
+
+flowchart TD
+
+    UserQuery[User Query] --> PromptEngine[QA Prompt Template]
+
+    subgraph Prompt Logic
+
+        SystemPrompt[Senior Consultant Persona + CoT]
+
+        UserTemplate[IRAC Structure Requirements]
+
+    end
+
+    PromptEngine --> LLM[Gemini Pro]
+
+    LLM -->|Step 1| Reasoning[Identify Issue & Rules]
+
+    Reasoning -->|Step 2| Synthesis[Apply Rules to Case]
+
+    Synthesis -->|Step 3| FinalOutput[Markdown Structured Response]
+
+```
