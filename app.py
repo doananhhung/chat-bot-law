@@ -1,5 +1,6 @@
 import streamlit as st
 import time
+import uuid
 from src.config import AppConfig
 from src.rag_engine.retriever import SemanticRetriever
 from src.rag_engine.generator import RAGChain
@@ -14,6 +15,9 @@ st.set_page_config(page_title="Trợ lý Luật Lao Động AI", layout="wide")
 # Session State Initialization
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
+
+if "session_id" not in st.session_state:
+    st.session_state.session_id = str(uuid.uuid4())
 
 def build_index():
     """Run the incremental ingestion pipeline."""
@@ -51,30 +55,41 @@ with st.sidebar:
     if st.button("🔄 Cập nhật Dữ liệu"):
         build_index()
         
- 
+    st.divider()
+    if st.button("🧹 Xóa Lịch sử Chat"):
+        st.session_state.chat_history = []
+        st.session_state.session_id = str(uuid.uuid4()) # Reset session ID
+        # Also clear backend memory if possible, but creating new session ID effectively does that.
+        st.rerun()
 
 # Main Chat
 rag_chain = get_rag_chain()
+
+def display_sources(sources):
+    """Helper to display source documents in an expander."""
+    if sources:
+        with st.expander("📚 Nguồn tham khảo"):
+            for doc in sources:
+                source = doc.metadata.get("source", "Unknown")
+                page = doc.metadata.get("page", "N/A")
+                try:
+                    # Convert 0-based to 1-based for UI
+                    page_display = int(page) + 1
+                except (ValueError, TypeError):
+                    page_display = page
+                st.caption(f"📄 **{source}** (Trang {page_display})")
+                st.text(doc.page_content[:300] + "...")
 
 # Display History
 for msg in st.session_state.chat_history:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
-        if "sources" in msg and msg["sources"]:
-            with st.expander("📚 Nguồn tham khảo"):
-                for doc in msg["sources"]:
-                    source = doc.metadata.get("source", "Unknown")
-                    page = doc.metadata.get("page", "N/A")
-                    try:
-                        page_display = int(page) + 1
-                    except (ValueError, TypeError):
-                        page_display = page
-                    st.caption(f"📄 **{source}** (Trang {page_display})")
-                    st.text(doc.page_content[:300] + "...")
+        if "sources" in msg:
+            display_sources(msg["sources"])
 
 # Chat Input
 if prompt := st.chat_input("Nhập câu hỏi của bạn về văn bản pháp luật..."):
-    # Add user message
+    # Add user message to history and display immediately
     st.session_state.chat_history.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -83,29 +98,30 @@ if prompt := st.chat_input("Nhập câu hỏi của bạn về văn bản pháp 
     with st.chat_message("assistant"):
         if not rag_chain:
             st.error("Hệ thống chưa sẵn sàng. Vui lòng kiểm tra cấu hình hoặc Build Index.")
-            response = {"answer": "Lỗi hệ thống.", "source_documents": []}
+            answer = "Lỗi hệ thống."
+            sources = []
+            standalone = None
         else:
-            with st.spinner("..."):
-                response = rag_chain.generate_answer(prompt)
+            with st.spinner("Đang suy nghĩ..."):
+                response = rag_chain.generate_answer(prompt, session_id=st.session_state.session_id)
+                answer = response["answer"]
+                sources = response.get("source_documents", [])
+                standalone = response.get("standalone_query")
                 
-            st.markdown(response["answer"])
+            st.markdown(answer)
+            
+            # Show Debug Info (Standalone Query)
+            if standalone and standalone != prompt:
+                with st.expander("🧠 Tư duy ngữ cảnh (Debug)"):
+                    st.info(f"AI đã hiểu câu hỏi là: **{standalone}**")
             
             # Show sources
-            if response.get("source_documents"):
-                with st.expander("📚 Nguồn tham khảo"):
-                    for doc in response["source_documents"]:
-                        source = doc.metadata.get("source", "Unknown")
-                        page = doc.metadata.get("page", "N/A")
-                        try:
-                            page_display = int(page) + 1
-                        except (ValueError, TypeError):
-                            page_display = page
-                        st.caption(f"📄 **{source}** (Trang {page_display})")
-                        st.text(doc.page_content[:300] + "...")
+            display_sources(sources)
 
-    # Save history
+    # Save to history and rerun to clean up UI
     st.session_state.chat_history.append({
         "role": "assistant", 
-        "content": response["answer"],
-        "sources": response.get("source_documents", [])
+        "content": answer,
+        "sources": sources
     })
+    st.rerun()

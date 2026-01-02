@@ -231,3 +231,106 @@ flowchart TD
     Synthesis -->|Step 3| FinalOutput[Markdown Structured Response]
 
 ```
+
+## [2026-01-02] Task: Context Memory & Conversational RAG
+### 1. Architectural Decision (ADR)
+- **Context**: The system was stateless. Users couldn't ask follow-up questions (e.g., "Does *it* apply to men?") because the RAG engine didn't know what "*it*" referred to.
+- **Decision**: Implemented **Conversational RAG** with **Query Reformulation**.
+    - **Sliding Window Memory**: Added `InMemoryHistoryManager` (in `src/utils/history_manager.py`) to store the last 10 messages per session.
+    - **Query Rewriting**: Added a `CONDENSE_QUESTION_PROMPT` and a rewrite step in `RAGChain`. Before retrieval, the system uses LLM to rewrite the user's query into a "Standalone Question" based on history.
+    - **Session Management**: Updated `app.py` to generate and persist `session_id`.
+- **Impact**: 
+    - **UX**: Users can now have natural, multi-turn conversations.
+    - **Accuracy**: Retrieval is significantly improved for follow-up questions as pronouns are resolved before searching.
+    - **Transparency**: UI now shows how the AI "understood" the question (Standalone Query) in debug mode.
+
+### 2. Flow Visualization (Mermaid)
+```mermaid
+%%{init: {'theme': 'default', 'themeVariables': { 'background': '#ffffff' }}}%%
+sequenceDiagram
+    participant User
+    participant UI as Streamlit App
+    participant RAG as RAGChain
+    participant History as HistoryManager
+    participant Rewriter as LLM (Rewriter)
+    participant Retriever
+
+    User->>UI: "Nó có áp dụng cho nam không?" (Follow-up)
+    UI->>RAG: generate_answer(query, session_id)
+    RAG->>History: get_context_string(session_id)
+    History-->>RAG: "User: Chế độ thai sản...\nAI: ..."
+    
+    rect rgb(255, 245, 245)
+        Note right of RAG: Rewrite Phase
+        RAG->>Rewriter: Rewrite(History + Query)
+        Rewriter-->>RAG: "Chế độ thai sản có áp dụng cho nam không?"
+    end
+    
+    RAG->>Retriever: search("Chế độ thai sản có áp dụng cho nam không?")
+    Retriever-->>RAG: Documents
+    RAG->>UI: Final Answer
+    RAG->>History: add_message(query, answer)
+
+## [2026-01-02] Task: Fix - Chat Context & Prompt Engineering
+### 1. Architectural Decision (ADR)
+- **Context**: 
+    - **Issue 1**: `GENERAL` intent chat was stateless. Users saying "My name is Hung" then "What is my name?" got generic responses because `chat_history` wasn't passed to the General Chain.
+    - **Issue 2**: The `CONDENSE_QUESTION_PROMPT` was hallucinating conversational replies instead of strictly rewriting queries for search (e.g., replying "Can you tell me..." instead of outputting "What is the user's name?").
+- **Decision**: 
+    - **Prompt Hardening**: Rewrote `CONDENSE_QUESTION_PROMPT` with strict negative constraints ("KHÔNG trả lời câu hỏi").
+    - **Context Injection**: Updated `GENERAL_PROMPT` to accept `chat_history` and modified `RAGChain.generate_answer` to inject it.
+- **Impact**: 
+    - General chat now remembers user context (Name, previous topics).
+    - RAG retrieval is more robust against "chatty" rewrites.
+
+### 2. Flow Visualization (Mermaid)
+```mermaid
+%%{init: {'theme': 'default', 'themeVariables': { 'background': '#ffffff' }}}%%
+flowchart TD
+    UserQuery --> History[Load History]
+    History --> Rewriter[Rewrite Query (Strict Mode)]
+    Rewriter --> Router{Intent?}
+    
+    Router -- GENERAL --> GenChain[General Chain]
+    History --> GenChain
+    GenChain --> Response
+    
+    Router -- LEGAL --> Retriever
+    Retriever --> RAGChain
+    RAGChain --> Response
+```
+
+## [2026-01-02] Task: UI Optimization & Rendering Logic
+### 1. Technical Explanation
+- **Context**: 
+    - **Issue 1**: Code duplication in `app.py` for displaying source documents (once in history loop, once in new message block).
+    - **Issue 2**: Streamlit's immediate rendering vs session state update caused potential "flicker" or double rendering of source expanders if not handled via a clean rerun.
+- **Change**: 
+    - **Refactor**: Extracted `display_sources(sources)` helper function in `app.py`.
+    - **Flow**: Implemented `st.rerun()` immediately after saving the assistant's response to history. This ensures the UI is rebuilt entirely from `session_state.chat_history`, guaranteeing a single, consistent source of truth for rendering.
+- **Impact**: 
+    - Cleaner code (DRY).
+    - Stable UI with no duplicate source widgets.
+
+### 2. Flow Visualization (Mermaid)
+```mermaid
+%%{init: {'theme': 'default', 'themeVariables': { 'background': '#ffffff' }}}%%
+sequenceDiagram
+    participant User
+    participant App
+    participant SessionState
+
+    User->>App: Input Query
+    App->>App: Display User Msg
+    App->>RAG: Generate Answer
+    RAG-->>App: {Answer, Sources}
+    App->>App: Display Answer & Sources (Temporary)
+    App->>SessionState: Append {Role: AI, Content, Sources}
+    App->>App: st.rerun()
+    Note right of App: Page Reloads
+    App->>SessionState: Read Full History
+    loop Render History
+        App->>App: Display Msg + display_sources()
+    end
+```
+```

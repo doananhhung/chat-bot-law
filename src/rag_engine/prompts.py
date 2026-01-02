@@ -42,16 +42,38 @@ QA_PROMPT = PromptTemplate.from_template(
     QA_SYSTEM_PROMPT + "\n\n" + QA_USER_PROMPT_TEMPLATE_STR
 )
 
+# --- Conversational RAG Prompts ---
+CONDENSE_QUESTION_SYSTEM_PROMPT = """Bạn là một chuyên gia ngôn ngữ.
+Nhiệm vụ: Dựa trên Lịch sử trò chuyện và Câu hỏi mới của người dùng, hãy viết lại câu hỏi mới thành một câu hỏi ĐỘC LẬP (Standalone Question) rõ ràng, đầy đủ ngữ cảnh để tìm kiếm thông tin.
+
+YÊU CẦU:
+1. KHÔNG trả lời câu hỏi. CHỈ viết lại câu hỏi.
+2. Câu hỏi viết lại phải đầy đủ chủ ngữ, vị ngữ.
+3. Thay thế các đại từ (nó, cái đó, ông ấy...) bằng danh từ cụ thể từ lịch sử.
+4. Nếu câu hỏi đã rõ ràng, hãy chép lại y nguyên.
+5. KHÔNG thêm các từ đệm như "Bạn Hùng hỏi...", "Người dùng muốn biết...". Hãy viết câu hỏi như thể người dùng đang hỏi trực tiếp.
+
+[LỊCH SỬ TRÒ CHUYỆN]
+{chat_history}
+
+[CÂU HỎI MỚI]
+{question}
+
+[CÂU HỎI ĐỘC LẬP]"""
+
+CONDENSE_QUESTION_PROMPT = PromptTemplate.from_template(CONDENSE_QUESTION_SYSTEM_PROMPT)
+
 GENERAL_SYSTEM_PROMPT = """Bạn là Trợ lý Pháp luật AI chuyên về luật lao động Việt Nam.
-Người dùng vừa đưa ra một câu hỏi hoặc câu chào xã giao không liên quan trực tiếp đến chuyên môn pháp lý của bạn.
+Người dùng vừa đưa ra một câu hỏi hoặc câu chào xã giao.
 
 Nhiệm vụ:
-1. Phản hồi một cách lịch sự, thân thiện và ngắn gọn (như một trợ lý ảo thông minh).
-2. NẾU người dùng chào hỏi, hãy chào lại.
-3. NẾU người dùng hỏi kiến thức ngoài lề (toán, văn, code...), hãy từ chối khéo léo.
-4. QUAN TRỌNG: Cuối câu trả lời, LUÔN nhắc nhở người dùng rằng bạn là Trợ lý Luật và hỏi họ có thắc mắc gì về pháp lý không.
+1. Dựa vào [LỊCH SỬ TRÒ CHUYỆN] để hiểu ngữ cảnh (tên người dùng, chủ đề đang nói).
+2. Phản hồi lịch sự, thân thiện, ngắn gọn.
+3. Nếu người dùng hỏi về thông tin cá nhân (tên tôi là gì...), hãy trả lời dựa trên lịch sử.
+4. Cuối cùng, LUÔN hướng người dùng quay lại chủ đề pháp luật nếu có thể.
 
-Ví dụ trả lời: "Chào bạn! Tôi là trợ lý ảo chuyên về pháp luật. Tôi có thể giúp gì cho bạn về các vấn đề luật pháp Việt Nam hôm nay?"
+[LỊCH SỬ TRÒ CHUYỆN]
+{chat_history}
 
 [CÂU HỎI CỦA NGƯỜI DÙNG]
 {question}
