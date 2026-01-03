@@ -19,12 +19,31 @@ if "chat_history" not in st.session_state:
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 
+@st.cache_resource(show_spinner="Đang khởi động Model & Index...")
+def get_retriever():
+    """Load and cache the Retriever (Embedding Model + FAISS Index)."""
+    try:
+        return SemanticRetriever()
+    except RuntimeError:
+        return None
+
+@st.cache_resource(show_spinner="Đang kết nối AI...")
+def get_rag_chain():
+    """Initialize and cache the RAG Chain logic (Stateless)."""
+    retriever = get_retriever()
+    if retriever:
+        return RAGChain(retriever)
+    return None
+
 def build_index():
     """Run the incremental ingestion pipeline."""
     try:
         with st.status("Đang đồng bộ dữ liệu...", expanded=True) as status:
             st.write("Đang quét thư mục và kiểm tra thay đổi...")
             VectorIndexer.sync_index()
+            
+            # Clear cache to reload new index next time
+            st.cache_resource.clear()
             
             status.update(label="Đồng bộ dữ liệu thành công!", state="complete")
             st.success("Hệ thống đã cập nhật những thay đổi mới nhất!")
@@ -33,16 +52,13 @@ def build_index():
     except Exception as e:
         st.error(f"Lỗi khi đồng bộ dữ liệu: {str(e)}")
 
-def get_rag_chain():
-    """Initialize RAG Chain (Cached in resource is not possible with custom classes easily, use session state)."""
-    if "rag_chain" not in st.session_state:
-        try:
-            retriever = SemanticRetriever()
-            st.session_state.rag_chain = RAGChain(retriever)
-        except Exception as e:
-            st.error(f"Không thể khởi động hệ thống: {e}")
-            return None
-    return st.session_state.rag_chain
+def format_chat_history(history):
+    """Convert list of dicts to string format for LLM."""
+    buffer = ""
+    for msg in history:
+        role = "User" if msg["role"] == "user" else "AI"
+        buffer += f"{role}: {msg['content']}\n"
+    return buffer
 
 # --- UI ---
 st.title("🤖 Trợ lý AI Tra cứu Pháp Luật")
@@ -58,11 +74,9 @@ with st.sidebar:
     st.divider()
     if st.button("🧹 Xóa Lịch sử Chat"):
         st.session_state.chat_history = []
-        st.session_state.session_id = str(uuid.uuid4()) # Reset session ID
-        # Also clear backend memory if possible, but creating new session ID effectively does that.
         st.rerun()
 
-# Main Chat
+# Main Chat Logic
 rag_chain = get_rag_chain()
 
 def display_sources(sources):
@@ -103,7 +117,10 @@ if prompt := st.chat_input("Nhập câu hỏi của bạn về văn bản pháp 
             standalone = None
         else:
             with st.spinner("Đang suy nghĩ..."):
-                response = rag_chain.generate_answer(prompt, session_id=st.session_state.session_id)
+                # Get history as string for context
+                history_str = format_chat_history(st.session_state.chat_history[:-1]) # Exclude current prompt
+                
+                response = rag_chain.generate_answer(prompt, chat_history_str=history_str)
                 answer = response["answer"]
                 sources = response.get("source_documents", [])
                 standalone = response.get("standalone_query")

@@ -244,33 +244,6 @@ flowchart TD
     - **Accuracy**: Retrieval is significantly improved for follow-up questions as pronouns are resolved before searching.
     - **Transparency**: UI now shows how the AI "understood" the question (Standalone Query) in debug mode.
 
-### 2. Flow Visualization (Mermaid)
-```mermaid
-%%{init: {'theme': 'default', 'themeVariables': { 'background': '#ffffff' }}}%%
-sequenceDiagram
-    participant User
-    participant UI as Streamlit App
-    participant RAG as RAGChain
-    participant History as HistoryManager
-    participant Rewriter as LLM (Rewriter)
-    participant Retriever
-
-    User->>UI: "Nó có áp dụng cho nam không?" (Follow-up)
-    UI->>RAG: generate_answer(query, session_id)
-    RAG->>History: get_context_string(session_id)
-    History-->>RAG: "User: Chế độ thai sản...\nAI: ..."
-    
-    rect rgb(255, 245, 245)
-        Note right of RAG: Rewrite Phase
-        RAG->>Rewriter: Rewrite(History + Query)
-        Rewriter-->>RAG: "Chế độ thai sản có áp dụng cho nam không?"
-    end
-    
-    RAG->>Retriever: search("Chế độ thai sản có áp dụng cho nam không?")
-    Retriever-->>RAG: Documents
-    RAG->>UI: Final Answer
-    RAG->>History: add_message(query, answer)
-
 ## [2026-01-02] Task: Fix - Chat Context & Prompt Engineering
 ### 1. Architectural Decision (ADR)
 - **Context**: 
@@ -333,4 +306,57 @@ sequenceDiagram
         App->>App: Display Msg + display_sources()
     end
 ```
+
+## [2026-01-03] Task: Performance Benchmarking
+### 1. Scientific Debugging (Protocol D)
+- **Goal**: Assess system latency (Embedding vs. Retrieval) and determine if optimization (ONNX/API) is needed.
+- **Experiment**:
+    - Created `tests/benchmark_embedding.py` and `tests/benchmark_retrieval.py`.
+    - Measured Cold Start (Load), Single Query Latency, and Batch Throughput.
+- **Results**:
+    - **Cold Start**: ~17s (High - Needs Caching).
+    - **Embedding**: ~550ms (First run/Cold CPU).
+    - **Retrieval (Warm)**: ~112ms (Includes Embedding + FAISS Search).
+- **Conclusion**: 
+    - Retrieval latency (~100ms) is excellent and not a bottleneck.
+    - No need to migrate to ONNX or External API (which adds network latency).
+    - **Action**: Focus optimization on **Application Caching** to solve Cold Start issues.
+
+## [2026-01-03] Task: Stateless RAG & Singleton Caching
+### 1. Architectural Decision (ADR)
+- **Context**: 
+    - **Issue**: Users experienced a ~7s delay when reloading the page.
+    - **Root Cause**: `RAGChain` was being re-initialized per session, triggering redundant LLM connection handshakes.
+- **Decision**: Implemented **Singleton Pattern** via `@st.cache_resource`.
+    - **Refactor**: Converted `RAGChain` to be **Stateless** (removed internal `InMemoryHistoryManager`).
+    - **Flow**: `app.py` now manages chat history and injects it into `RAGChain.generate_answer(query, history_str)`.
+    - **Caching**: `SemanticRetriever` and `RAGChain` are now global singletons, loaded once per server instance.
+- **Impact**:
+    - **Performance**: Page reload delay reduced from ~7s to <1s (Instant).
+    - **Efficiency**: Memory usage reduced (shared Model/Index across users).
+    - **Architecture**: Cleaner separation of concerns (UI manages State, Engine is Pure Logic).
+
+### 2. Flow Visualization (Mermaid)
+```mermaid
+%%{init: {'theme': 'default', 'themeVariables': { 'background': '#ffffff' }}}%%
+classDiagram
+    class StreamlitApp {
+        +session_state: chat_history
+        +get_rag_chain() : Cached
+        +generate_answer()
+    }
+    class RAGChain {
+        <<Singleton>>
+        -retriever: SemanticRetriever
+        +generate_answer(query, history_str)
+    }
+    class SemanticRetriever {
+        <<Singleton>>
+        -vector_store: FAISS
+        -embeddings: Model
+    }
+    
+    StreamlitApp --> RAGChain : Uses (Cached)
+    RAGChain --> SemanticRetriever : Uses (Cached)
+    StreamlitApp ..> RAGChain : Injects History
 ```

@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any, List, Optional
 from langchain_core.output_parsers import StrOutputParser
 from src.config import AppConfig
 from src.rag_engine.retriever import SemanticRetriever
@@ -11,14 +11,16 @@ from src.rag_engine.prompts import (
 from src.rag_engine.llm_factory import LLMFactory
 from src.rag_engine.router import IntentRouter
 from src.utils.logger import logger
-from src.utils.history_manager import InMemoryHistoryManager
 
 class RAGChain:
-    """Orchestrates the RAG flow with Intent Routing and Context Memory."""
+    """
+    Orchestrates the RAG flow with Intent Routing.
+    STATELESS: Does not store chat history internally.
+    """
     
     def __init__(self, retriever: SemanticRetriever):
         self.retriever = retriever
-        self.history_manager = InMemoryHistoryManager(max_history_length=10)
+        # Removed internal history_manager to allow Singleton usage
         
         # 1. Initialize Main Generator LLM
         self.llm = LLMFactory.create_llm(
@@ -40,18 +42,20 @@ class RAGChain:
         # 3. Initialize Query Rewriter Chain
         self.condense_question_chain = CONDENSE_QUESTION_PROMPT | self.llm | StrOutputParser()
         
-    def generate_answer(self, query: str, session_id: str = "default_session") -> Dict[str, Any]:
+    def generate_answer(self, query: str, chat_history_str: str = "") -> Dict[str, Any]:
         """
         Generate answer for the query with context awareness.
+        Args:
+            query: Current user question.
+            chat_history_str: Formatted history string (User: ...\nAI: ...)
         """
         # --- Step 1: Contextualize Query (Rewriting) ---
-        chat_history_str = self.history_manager.get_context_string(session_id)
         standalone_query = query
         
         if chat_history_str:
             try:
                 # Rewrite query if there is history
-                logger.info("History found. Rewriting query...")
+                logger.info("History provided. Rewriting query...")
                 standalone_query = self.condense_question_chain.invoke({
                     "chat_history": chat_history_str,
                     "question": query
@@ -59,11 +63,11 @@ class RAGChain:
                 logger.info(f"Original: '{query}' -> Standalone: '{standalone_query}'")
             except Exception as e:
                 logger.error(f"Query rewriting failed: {e}")
-                standalone_query = query # Fallback to original
+                standalone_query = query # Fallback
 
         # --- Step 2: Intent Classification (on Standalone Query) ---
         try:
-            # We classify the INTENT based on the rewritten query to see if it's legally relevant
+            # Classify intent on the rewritten query
             intent = self.router.classify(standalone_query)
             logger.info(f"Query Intent: {intent} | Query: '{standalone_query}'")
         except Exception as e:
@@ -105,19 +109,17 @@ class RAGChain:
                     logger.info("Sending RAG request to LLM...")
                     final_answer = self.qa_chain.invoke({
                         "context": context_str,
-                        "question": standalone_query # Use clear query for answer generation
+                        "question": standalone_query
                     })
                 except Exception as e:
                     logger.error(f"LLM Generation failed: {e}")
                     final_answer = "Xin lỗi, tôi không thể xử lý yêu cầu lúc này (Lỗi kết nối hoặc API)."
 
-        # --- Step 5: Update History ---
-        self.history_manager.add_message(session_id, "user", query) # Save original query
-        self.history_manager.add_message(session_id, "assistant", final_answer)
+        # --- No Internal History Update (Handled by Caller) ---
 
         return {
             "answer": final_answer,
             "source_documents": source_docs,
             "intent": intent,
-            "standalone_query": standalone_query # Return for debugging/UI
+            "standalone_query": standalone_query
         }
