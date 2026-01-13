@@ -24,52 +24,42 @@ Hệ thống Chatbot tra cứu pháp luật thông minh sử dụng kỹ thuật
 
 ---
 
-## 🛠️ Cài đặt & Chạy
+## 📚 Tài liệu & Hướng dẫn (Documentation)
 
-### 1. Yêu cầu hệ thống
-*   Python 3.10 trở lên
-*   Git
+Dự án này đi kèm với bộ tài liệu kỹ thuật chi tiết dành cho Developer:
 
-### 2. Cài đặt
+*   **[Bắt đầu nhanh (Quick Start)](docs/4_guides/setup_local.md)**: Hướng dẫn cài đặt môi trường Local và chạy thử.
+*   **[Kiến trúc hệ thống (Architecture)](docs/1_architecture/system_overview.md)**: Hiểu về luồng dữ liệu và thiết kế Modular Monolith.
+*   **[Cơ chế hoạt động (Flows)](docs/index.md#2-luồng-hoạt-động-flows---quan-trọng)**: Giải thích sâu về RAG Pipeline, Ingestion Sync, và Database Lifecycle.
 
-1.  **Clone repository**:
-    ```bash
-    git clone <repo_url>
-    cd chat-bot-law
-    ```
+👉 **[Xem toàn bộ tài liệu tại đây (docs/)](docs/index.md)**
 
-2.  **Cài đặt thư viện**:
-    ```bash
-    pip install -r requirements.txt
-    ```
+---
 
-3.  **Cấu hình môi trường**:
-    *   Tạo file `.env` từ file mẫu:
-        ```bash
-        cp .env.example .env
-        ```
-    *   Cập nhật API Key trong `.env`:
-        ```env
-        GOOGLE_API_KEY=AIzaSy...
-        # Hoặc dùng Groq
-        GROQ_API_KEY=gsk_...
-        ```
+## 🛠️ Cài đặt nhanh
 
-### 3. Chuẩn bị Dữ liệu
+Vui lòng xem hướng dẫn chi tiết tại **[docs/4_guides/setup_local.md](docs/4_guides/setup_local.md)**.
 
-1.  Copy các file văn bản luật (PDF, DOCX) vào thư mục `data/raw/`.
-2.  (Tùy chọn) Chạy lệnh khởi tạo dữ liệu mẫu nếu cần test nhanh.
+Tóm tắt lệnh cho Windows:
+```powershell
+# 1. Clone & Setup Env
+git clone <repo_url>
+cd chat-bot-law
+python -m venv venv
+.\venv\Scripts\activate
 
-### 4. Chạy Ứng dụng
+# 2. Install Deps
+pip install -r requirements.txt
 
-1.  **Khởi động Web App**:
-    ```bash
-    streamlit run app.py
-    ```
+# 3. Config
+copy .env.example .env
+# (Nhớ điền API Key vào .env)
 
-2.  **Sử dụng**:
-    *   Truy cập địa chỉ hiển thị trên terminal (thường là `http://localhost:8501`).
-    *   Trong lần chạy đầu tiên, nhấn **"Cập nhật Index"** ở Sidebar để hệ thống xử lý dữ liệu.
+# 4. Run
+mkdir data\raw
+# (Copy file PDF luật vào data\raw)
+streamlit run app.py
+```
 
 ---
 
@@ -110,4 +100,6 @@ project_root/
 
 ## 🤝 Đóng góp
 
-Vui lòng đọc `DEV_LOG.md` để hiểu lịch sử thay đổi và các quyết định kiến trúc (ADR) trước khi submit PR.
+Chúng tôi hoan nghênh mọi đóng góp! Vui lòng đọc **[docs/index.md](docs/index.md)** để hiểu cấu trúc dự án trước khi submit Pull Request.
+
+Lịch sử thay đổi và các quyết định kiến trúc quan trọng được ghi lại trong `DEV_LOG.md`.
