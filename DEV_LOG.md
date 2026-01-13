@@ -440,3 +440,26 @@ sequenceDiagram
 - **Impact**: 
     - **Privacy/Cleanup**: Users can now manage their workspace effectively.
     - **Robustness**: The UI handles deletion without crashing or getting stuck in a "deleted session" state.
+
+## [2026-01-13] Task: Quick Delete UI (Sidebar)
+### 1. Architectural Decision (ADR)
+- **Context**: Deleting sessions required opening a settings menu, which was cumbersome for multiple deletions.
+- **Decision**: Implemented **Quick Delete** buttons directly in the sidebar list.
+    - **UI Layout**: Used `st.columns([0.8, 0.2])` to split each session item into a "Title Button" (Navigation) and a "Delete Button" (Action).
+    - **UX refinement**: Used `use_container_width=True` on the delete button to ensure the "✕" icon is centered and responsive.
+- **Impact**:
+    - **Efficiency**: Users can delete chats with a single click.
+    - **Aesthetics**: Clean, modern sidebar layout with clear action areas.
+
+### 2. Flow Visualization (Mermaid)
+```mermaid
+%%{init: {'theme': 'default', 'themeVariables': { 'background': '#ffffff' }}}%%
+flowchart LR
+    SidebarItem -->|Split| Col1[Navigation 80%]
+    SidebarItem -->|Split| Col2[Action 20%]
+    Col1 --> ClickNav[Switch Session]
+    Col2 --> ClickDel[Delete Session]
+    ClickDel --> CheckActive{Is Active?}
+    CheckActive -- Yes --> SwitchNext[Switch to Next/New]
+    CheckActive -- No --> Rerun[Refresh List]
+```

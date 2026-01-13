@@ -91,17 +91,21 @@ def build_index():
         st.error(f"Lỗi khi đồng bộ dữ liệu: {str(e)}")
 
 def handle_delete_session(repo, session_id):
-    """Delete a session and switch to another one."""
+    """Delete a session. If active, switch to another."""
+    is_active = (session_id == st.session_state.session_id)
+    
     repo.delete_session(session_id)
     
-    # Try to find another session
-    remaining = repo.get_recent_sessions(limit=1)
-    if remaining:
-        st.session_state.session_id = remaining[0].id
-    else:
-        # If no sessions left, create a new one
-        new_sess = repo.create_session(title="Cuộc hội thoại mới")
-        st.session_state.session_id = new_sess.id
+    if is_active:
+        # Try to find another session
+        remaining = repo.get_recent_sessions(limit=1)
+        if remaining:
+            st.session_state.session_id = remaining[0].id
+        else:
+            # If no sessions left, create a new one
+            new_sess = repo.create_session(title="Cuộc hội thoại mới")
+            st.session_state.session_id = new_sess.id
+    
     st.rerun()
 
 def handle_delete_all_sessions(repo):
@@ -141,12 +145,19 @@ with st.sidebar:
     
     recent_sessions = repo.get_recent_sessions(limit=10)
     for s in recent_sessions:
-        # Highlight active session
-        button_type = "primary" if s.id == st.session_state.session_id else "secondary"
-        label = s.title if s.title else "Không tiêu đề"
-        if st.button(f"💬 {label}", key=s.id, type=button_type, use_container_width=True):
-            st.session_state.session_id = s.id
-            st.rerun()
+        col_nav, col_del = st.columns([0.8, 0.2])
+        
+        with col_nav:
+            # Highlight active session
+            button_type = "primary" if s.id == st.session_state.session_id else "secondary"
+            label = s.title if s.title else "Không tiêu đề"
+            if st.button(f"💬 {label}", key=f"nav_{s.id}", type=button_type, use_container_width=True):
+                st.session_state.session_id = s.id
+                st.rerun()
+                
+        with col_del:
+             if st.button("✕", key=f"del_{s.id}", help="Xóa hội thoại này", use_container_width=True):
+                handle_delete_session(repo, s.id)
 
     st.divider()
     with st.expander("⚙️ Quản lý Dữ liệu"):
@@ -155,8 +166,6 @@ with st.sidebar:
             build_index()
         
         st.divider()
-        if st.button("🗑️ Xóa hội thoại này", type="secondary", use_container_width=True):
-            handle_delete_session(repo, st.session_state.session_id)
             
         if st.button("🔥 Xóa toàn bộ dữ liệu chat", type="primary", use_container_width=True):
              handle_delete_all_sessions(repo)
