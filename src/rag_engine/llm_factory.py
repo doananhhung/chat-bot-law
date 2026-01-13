@@ -32,17 +32,17 @@ class LLMFactory:
                     convert_system_message_to_human=True,
                     **kwargs
                 )
-                
-            elif provider.lower() == "ollama":
-                # Lazy import to avoid hard dependency if not used
+
+            elif provider.lower() == "groq":
                 try:
-                    from langchain_community.chat_models import ChatOllama
+                    from langchain_groq import ChatGroq
+                    from pydantic import SecretStr
                 except ImportError:
-                    raise ImportError("Please install langchain-community to use Ollama: pip install langchain-community")
-                    
-                return ChatOllama(
+                    raise ImportError("Please install langchain-groq to use Groq: pip install langchain-groq")
+                
+                return ChatGroq(
                     model=model_name,
-                    base_url=AppConfig.OLLAMA_BASE_URL,
+                    api_key=SecretStr(AppConfig.GROQ_API_KEY) if AppConfig.GROQ_API_KEY else None,
                     **kwargs
                 )
                 

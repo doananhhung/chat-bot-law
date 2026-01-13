@@ -9,16 +9,20 @@ from src.ingestion.splitter import TextSplitter
 from src.ingestion.indexer import VectorIndexer
 from src.utils.logger import logger
 
+# Database Imports
+from src.database.engine import init_db, SessionLocal
+from src.database.repository import ChatRepository
+
 # Page Config
 st.set_page_config(page_title="Trợ lý Luật Lao Động AI", layout="wide")
 
-# Session State Initialization
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
+# --- Database Initialization ---
+try:
+    init_db()
+except Exception as e:
+    logger.error(f"Failed to initialize database: {e}")
 
-if "session_id" not in st.session_state:
-    st.session_state.session_id = str(uuid.uuid4())
-
+# --- Helper Functions ---
 @st.cache_resource(show_spinner="Đang khởi động Model & Index...")
 def get_retriever():
     """Load and cache the Retriever (Embedding Model + FAISS Index)."""
@@ -34,6 +38,40 @@ def get_rag_chain():
     if retriever:
         return RAGChain(retriever)
     return None
+
+def get_db_session():
+    return SessionLocal()
+
+def format_chat_history(messages):
+    """Convert list of DB objects to string format for LLM."""
+    buffer = ""
+    for msg in messages:
+        role = "User" if msg.role == "user" else "AI"
+        buffer += f"{role}: {msg.content}\n"
+    return buffer
+
+def display_sources(sources):
+    """Helper to display source documents in an expander."""
+    if sources:
+        with st.expander("📚 Nguồn tham khảo"):
+            for doc in sources:
+                # Handle both dict (from DB) and Document object (from RAG)
+                if isinstance(doc, dict):
+                    source = doc.get("source", "Unknown")
+                    page = doc.get("page", "N/A")
+                    content = doc.get("page_content", "") or doc.get("content", "")
+                else:
+                    source = doc.metadata.get("source", "Unknown")
+                    page = doc.metadata.get("page", "N/A")
+                    content = doc.page_content
+
+                try:
+                    # Convert 0-based to 1-based for UI
+                    page_display = int(page) + 1
+                except (ValueError, TypeError):
+                    page_display = page
+                st.caption(f"📄 **{source}** (Trang {page_display})")
+                st.text(content[:300] + "...")
 
 def build_index():
     """Run the incremental ingestion pipeline."""
@@ -52,93 +90,147 @@ def build_index():
     except Exception as e:
         st.error(f"Lỗi khi đồng bộ dữ liệu: {str(e)}")
 
-def format_chat_history(history):
-    """Convert list of dicts to string format for LLM."""
-    buffer = ""
-    for msg in history:
-        role = "User" if msg["role"] == "user" else "AI"
-        buffer += f"{role}: {msg['content']}\n"
-    return buffer
+def handle_delete_session(repo, session_id):
+    """Delete a session and switch to another one."""
+    repo.delete_session(session_id)
+    
+    # Try to find another session
+    remaining = repo.get_recent_sessions(limit=1)
+    if remaining:
+        st.session_state.session_id = remaining[0].id
+    else:
+        # If no sessions left, create a new one
+        new_sess = repo.create_session(title="Cuộc hội thoại mới")
+        st.session_state.session_id = new_sess.id
+    st.rerun()
 
-# --- UI ---
+def handle_delete_all_sessions(repo):
+    """Delete all sessions and create a fresh one."""
+    repo.delete_all_sessions()
+    new_sess = repo.create_session(title="Cuộc hội thoại mới")
+    st.session_state.session_id = new_sess.id
+    st.rerun()
+
+# --- Session Management ---
+if "session_id" not in st.session_state:
+    # Initialize a new session in DB
+    db = get_db_session()
+    repo = ChatRepository(db)
+    new_session = repo.create_session(title="Cuộc hội thoại mới")
+    st.session_state.session_id = new_session.id
+    db.close()
+
+# --- Main UI ---
 st.title("🤖 Trợ lý AI Tra cứu Pháp Luật")
+
+# Database Connection for this run
+db = get_db_session()
+repo = ChatRepository(db)
 
 # Sidebar
 with st.sidebar:
-    st.header("Quản lý Dữ liệu")
-    st.info(f"Thư mục dữ liệu: `{AppConfig.RAW_DATA_PATH}`")
+    st.header("🗂️ Quản lý Hội thoại")
     
-    if st.button("🔄 Cập nhật Dữ liệu"):
-        build_index()
+    if st.button("➕ Cuộc hội thoại mới", use_container_width=True):
+        new_session = repo.create_session(title="Cuộc hội thoại mới")
+        st.session_state.session_id = new_session.id
+        st.rerun()
         
     st.divider()
-    if st.button("🧹 Xóa Lịch sử Chat"):
-        st.session_state.chat_history = []
-        st.rerun()
+    st.subheader("Gần đây")
+    
+    recent_sessions = repo.get_recent_sessions(limit=10)
+    for s in recent_sessions:
+        # Highlight active session
+        button_type = "primary" if s.id == st.session_state.session_id else "secondary"
+        label = s.title if s.title else "Không tiêu đề"
+        if st.button(f"💬 {label}", key=s.id, type=button_type, use_container_width=True):
+            st.session_state.session_id = s.id
+            st.rerun()
 
-# Main Chat Logic
-rag_chain = get_rag_chain()
+    st.divider()
+    with st.expander("⚙️ Quản lý Dữ liệu"):
+        st.info(f"Nguồn: `{AppConfig.RAW_DATA_PATH}`")
+        if st.button("🔄 Cập nhật Index"):
+            build_index()
+        
+        st.divider()
+        if st.button("🗑️ Xóa hội thoại này", type="secondary", use_container_width=True):
+            handle_delete_session(repo, st.session_state.session_id)
+            
+        if st.button("🔥 Xóa toàn bộ dữ liệu chat", type="primary", use_container_width=True):
+             handle_delete_all_sessions(repo)
 
-def display_sources(sources):
-    """Helper to display source documents in an expander."""
-    if sources:
-        with st.expander("📚 Nguồn tham khảo"):
-            for doc in sources:
-                source = doc.metadata.get("source", "Unknown")
-                page = doc.metadata.get("page", "N/A")
-                try:
-                    # Convert 0-based to 1-based for UI
-                    page_display = int(page) + 1
-                except (ValueError, TypeError):
-                    page_display = page
-                st.caption(f"📄 **{source}** (Trang {page_display})")
-                st.text(doc.page_content[:300] + "...")
+# Main Chat Area
+current_session_id = st.session_state.session_id
+messages = repo.get_messages(current_session_id)
 
 # Display History
-for msg in st.session_state.chat_history:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-        if "sources" in msg:
-            display_sources(msg["sources"])
+for msg in messages:
+    with st.chat_message(msg.role):
+        st.markdown(msg.content)
+        if msg.role == "assistant" and msg.sources:
+            display_sources(msg.sources)
 
 # Chat Input
-if prompt := st.chat_input("Nhập câu hỏi của bạn về văn bản pháp luật..."):
-    # Add user message to history and display immediately
-    st.session_state.chat_history.append({"role": "user", "content": prompt})
+rag_chain = get_rag_chain()
+
+if prompt := st.chat_input("Nhập câu hỏi của bạn..."):
+    # 1. Display User Message immediately
     with st.chat_message("user"):
         st.markdown(prompt)
-        
-    # Generate Answer
+    
+    # 2. Save User Message to DB
+    repo.add_message(current_session_id, "user", prompt)
+    
+    # 3. Generate Answer
     with st.chat_message("assistant"):
         if not rag_chain:
-            st.error("Hệ thống chưa sẵn sàng. Vui lòng kiểm tra cấu hình hoặc Build Index.")
+            st.error("Hệ thống chưa sẵn sàng.")
             answer = "Lỗi hệ thống."
             sources = []
-            standalone = None
         else:
-            with st.spinner("Đang suy nghĩ..."):
-                # Get history as string for context
-                history_str = format_chat_history(st.session_state.chat_history[:-1]) # Exclude current prompt
+            with st.spinner("Đang tra cứu và phân tích..."):
+                # Format history for Context
+                history_str = format_chat_history(messages) # Use DB messages
                 
+                # Update Session Title if it's the first message
+                if len(messages) == 0:
+                    # Simple heuristic: Use first 6 words of prompt
+                    new_title = " ".join(prompt.split()[:6]) + "..."
+                    repo.update_session_title(current_session_id, new_title)
+                
+                # Call RAG
                 response = rag_chain.generate_answer(prompt, chat_history_str=history_str)
                 answer = response["answer"]
-                sources = response.get("source_documents", [])
-                standalone = response.get("standalone_query")
                 
+                # Normalize sources for DB storage (must be JSON serializable)
+                # RAG returns Document objects, we need dicts
+                raw_sources = response.get("source_documents", [])
+                json_sources = []
+                for doc in raw_sources:
+                    json_sources.append({
+                        "source": doc.metadata.get("source", "Unknown"),
+                        "page": doc.metadata.get("page", "N/A"),
+                        "page_content": doc.page_content
+                    })
+                
+                standalone = response.get("standalone_query")
+
             st.markdown(answer)
             
-            # Show Debug Info (Standalone Query)
             if standalone and standalone != prompt:
-                with st.expander("🧠 Tư duy ngữ cảnh (Debug)"):
-                    st.info(f"AI đã hiểu câu hỏi là: **{standalone}**")
+                with st.expander("🧠 Tư duy ngữ cảnh"):
+                    st.info(f"AI đã hiểu: **{standalone}**")
             
-            # Show sources
-            display_sources(sources)
+            display_sources(json_sources)
+            
+            # 4. Save Assistant Message to DB
+            repo.add_message(current_session_id, "assistant", answer, sources=json_sources)
 
-    # Save to history and rerun to clean up UI
-    st.session_state.chat_history.append({
-        "role": "assistant", 
-        "content": answer,
-        "sources": sources
-    })
+    # 5. Rerun to refresh UI/Sidebar
+    db.close()
     st.rerun()
+
+# Close DB connection at end of script run
+db.close()

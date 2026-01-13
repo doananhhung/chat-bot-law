@@ -271,6 +271,10 @@ flowchart TD
     Router -- LEGAL --> Retriever
     Retriever --> RAGChain
     RAGChain --> Response
+    
+    Router -- LEGAL --> Retriever
+    Retriever --> RAGChain
+    RAGChain --> Response
 ```
 
 ## [2026-01-02] Task: UI Optimization & Rendering Logic
@@ -359,4 +363,80 @@ classDiagram
     StreamlitApp --> RAGChain : Uses (Cached)
     RAGChain --> SemanticRetriever : Uses (Cached)
     StreamlitApp ..> RAGChain : Injects History
+
+## [2026-01-03] Task: Integrate Groq LLM Provider
+### 1. Architectural Decision (ADR)
+- **Context**: User requested support for `moonshotai/kimi-k2-instruct-0905` via Groq API.
+- **Decision**: Extended `LLMFactory` to support `groq` provider using `langchain-groq`.
+- **Changes**:
+    - **Dependency**: Added `langchain-groq` to `requirements.txt`.
+    - **Configuration**: Updated `AppConfig` to include `GROQ_API_KEY` and validation logic.
+    - **Factory**: Added `ChatGroq` instantiation logic in `src/rag_engine/llm_factory.py`.
+- **Impact**: System now supports high-performance inference via Groq in addition to Google and Ollama.
+
+### 2. Flow Visualization (Mermaid)
+```mermaid
+%%{init: {'theme': 'default', 'themeVariables': { 'background': '#ffffff' }}}%%
+classDiagram
+    class LLMFactory {
+        +create_llm(provider, model)
+    }
+    class ChatGoogleGenerativeAI
+    class ChatOllama
+    class ChatGroq
+
+    LLMFactory ..> ChatGoogleGenerativeAI : Creates (provider='google')
+    LLMFactory ..> ChatOllama : Creates (provider='ollama')
+    LLMFactory ..> ChatGroq : Creates (provider='groq')
 ```
+
+## [2026-01-13] Task: Database Persistence Integration
+### 1. Architectural Decision (ADR)
+- **Context**: Chat history was stored in `session_state` (RAM), leading to data loss on refresh and no ability to review past conversations.
+- **Decision**: Implemented **Persistent Layer** using **SQLAlchemy** (SQLite for MVP).
+    - **Schema**: Created `chat_sessions` and `chat_messages` tables.
+    - **Repository Pattern**: Implemented `ChatRepository` to abstract DB operations from UI.
+    - **UI Refactor**: Updated `app.py` to:
+        -   Initialize DB on startup.
+        -   List recent chats in Sidebar.
+        -   Load/Save messages directly to DB.
+- **Impact**: 
+    - **Persistence**: Conversations are now saved permanently.
+    - **UX**: Users can create new chats and switch between recent history.
+    - **Scalability**: Ready for PostgreSQL migration via connection string change.
+
+### 2. Flow Visualization (Mermaid)
+```mermaid
+%%{init: {'theme': 'default', 'themeVariables': { 'background': '#ffffff' }}}%%
+sequenceDiagram
+    participant UI
+    participant Repo as ChatRepository
+    participant DB as SQLite
+
+    UI->>Repo: create_session()
+    Repo->>DB: INSERT INTO sessions
+    
+    loop Chat Loop
+        UI->>Repo: add_message(user, content)
+        Repo->>DB: INSERT INTO messages
+        
+        UI->>RAG: generate_answer()
+        RAG-->>UI: Answer + Sources
+        
+        UI->>Repo: add_message(ai, content, sources)
+        Repo->>DB: INSERT INTO messages
+        Repo->>DB: UPDATE sessions SET updated_at = NOW()
+        
+        UI->>UI: st.rerun()
+    end
+```
+
+## [2026-01-13] Task: Chat History Management Features
+### 1. Architectural Decision (ADR)
+- **Context**: Users needed to delete old or irrelevant conversations, but the system only allowed creating new ones.
+- **Decision**: Implemented **Delete Session** and **Delete All** functionality.
+    - **Repository**: Added `delete_session` and `delete_all_sessions`. relied on SQLAlchemy `cascade="all, delete-orphan"` to clean up messages.
+    - **UI Logic**: Implemented `handle_delete_session` helper to safely switch to the next available session or create a new one if the current list is empty, preventing invalid state.
+- **Impact**: 
+    - **Privacy/Cleanup**: Users can now manage their workspace effectively.
+    - **Robustness**: The UI handles deletion without crashing or getting stuck in a "deleted session" state.

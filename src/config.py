@@ -13,12 +13,18 @@ class AppConfig:
     
     # Google API
     GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+
+    # Groq API
+    GROQ_API_KEY = os.getenv("GROQ_API_KEY")
     
     # Embedding Model (HuggingFace)
     EMBEDDING_MODEL_NAME = "bkai-foundation-models/vietnamese-bi-encoder"
     
     # Vector Database
     VECTOR_DB_PATH = os.path.join(PROJECT_ROOT, "data", "vector_store")
+    
+    # SQL Database (Chat History)
+    SQL_DB_PATH = os.path.join(PROJECT_ROOT, "data", "chat_history.db")
     
     # Data Paths
     RAW_DATA_PATH = os.path.join(PROJECT_ROOT, "data", "raw")
@@ -45,3 +51,6 @@ class AppConfig:
         """Validate critical configuration."""
         if cls.LLM_PROVIDER == "google" and not cls.GOOGLE_API_KEY:
             raise ValueError("GOOGLE_API_KEY is missing but provider is set to 'google'. Check your .env file.")
+        
+        if cls.LLM_PROVIDER == "groq" and not cls.GROQ_API_KEY:
+            raise ValueError("GROQ_API_KEY is missing but provider is set to 'groq'. Check your .env file.")

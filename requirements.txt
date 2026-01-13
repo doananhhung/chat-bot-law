@@ -1,6 +1,7 @@
 langchain>=0.1.0
 langchain-google-genai>=0.0.6
 langchain-community>=0.0.10
+langchain-groq>=0.0.1
 faiss-cpu>=1.7.4
 langchain-huggingface>=0.1.2
 pypdf>=3.17.0
@@ -12,3 +13,4 @@ filelock>=3.13.0
 python-magic-bin>=0.4.14 ; platform_system == "Windows"
 python-magic>=0.4.27 ; platform_system != "Windows"
 pytest>=7.4.0
+sqlalchemy>=2.0.0
