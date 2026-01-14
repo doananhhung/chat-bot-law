@@ -1,44 +1,32 @@
-<style>
-    /* Force white background and black text for the whole page */
-    body, .vscode-body {
-        background-color: #ffffff !important;
-        color: #000000 !important;
-    }
-    /* Style code blocks to be readable on white */
-    code, pre {
-        background-color: #f0f0f0 !important;
-        color: #222222 !important;
-    }
-</style>
-# DESIGN DOCUMENT: QUICK DELETE UI (SIDEBAR)
-**Date:** 2026-01-13
-**Status:** DRAFT
-**Context:** The current deletion process requires users to select a conversation, open a settings expander, and click a delete button. This is too many clicks for managing multiple chats.
+# TÀI LIỆU THIẾT KẾ: GIAO DIỆN XÓA NHANH (SIDEBAR)
+**Ngày:** 2026-01-13
+**Trạng thái:** DRAFT
+**Bối cảnh:** Quy trình xóa hiện tại yêu cầu người dùng chọn một cuộc hội thoại, mở expander cài đặt, và click nút xóa. Điều này quá nhiều click để quản lý nhiều chat.
 
 ---
 
-## 1. OBJECTIVE
-Improve the User Experience (UX) by placing a "Quick Delete" button (e.g., `x` or `🗑️`) directly next to each conversation title in the Sidebar history list.
+## 1. MỤC TIÊU
+Cải thiện Trải nghiệm Người dùng (UX) bằng cách đặt nút "Xóa Nhanh" (ví dụ: `x` hoặc `🗑️`) trực tiếp bên cạnh mỗi tiêu đề hội thoại trong danh sách lịch sử Sidebar.
 
-## 2. CURRENT STATE
-*   **Structure**: The sidebar iterates through `recent_sessions` and renders a single `st.button` (full width) for each session.
+## 2. TRẠNG THÁI HIỆN TẠI
+*   **Cấu trúc**: Sidebar lặp qua `recent_sessions` và render một `st.button` đơn (full width) cho mỗi session.
 *   **Code Snippet**:
     ```python
     for s in recent_sessions:
         if st.button(label, ...): switch_session()
     ```
 
-## 3. PROPOSED UI LAYOUT
+## 3. LAYOUT UI ĐỀ XUẤT
 
-To achieve the "Title + Delete Button" layout in Streamlit, we will use `st.columns` for each list item.
+Để đạt được layout "Tiêu đề + Nút Xóa" trong Streamlit, chúng ta sẽ sử dụng `st.columns` cho mỗi item trong danh sách.
 
-### Layout Mockup
+### Mockup Layout
 ```text
 | Sidebar ------------------------|
 |                                 |
-| [ + New Chat ]                  |
+| [ + Chat Mới ]                  |
 |                                 |
-| Recent:                         |
+| Gần đây:                        |
 | [Chat A               ] [ X ]   |
 | [Chat B (Active)      ] [ X ]   |
 | [Chat C               ] [ X ]   |
@@ -46,66 +34,66 @@ To achieve the "Title + Delete Button" layout in Streamlit, we will use `st.colu
 |---------------------------------|
 ```
 
-### Technical Component Strategy
-*   **Grid System**: Use `col1, col2 = st.columns([0.85, 0.15])`.
-*   **Column 1 (Select)**: Contains the session title button. Clicking it switches the `session_id`.
-*   **Column 2 (Delete)**: Contains the delete button (icon `✖` or `🗑`). Clicking it triggers the deletion logic.
+### Chiến lược Component Kỹ thuật
+*   **Grid System**: Sử dụng `col1, col2 = st.columns([0.85, 0.15])`.
+*   **Column 1 (Chọn)**: Chứa nút tiêu đề session. Click vào sẽ chuyển đổi `session_id`.
+*   **Column 2 (Xóa)**: Chứa nút xóa (icon `✖` hoặc `🗑`). Click vào sẽ kích hoạt logic xóa.
 
-## 4. INTERACTION LOGIC
+## 4. LOGIC TƯƠNG TÁC
 
-### 4.1. Selecting a Session (Column 1)
-*   **Action**: User clicks the Title.
-*   **Result**: 
-    *   Update `st.session_state.session_id`.
+### 4.1. Chọn một Session (Column 1)
+*   **Hành động**: Người dùng click vào Tiêu đề.
+*   **Kết quả**:
+    *   Cập nhật `st.session_state.session_id`.
     *   `st.rerun()`.
 
-### 4.2. Deleting a Session (Column 2)
-*   **Action**: User clicks `✖`.
+### 4.2. Xóa một Session (Column 2)
+*   **Hành động**: Người dùng click `✖`.
 *   **Logic**:
-    1.  **Backend**: Call `repo.delete_session(target_id)`.
-    2.  **State Check**:
-        *   **Scenario A: User deleted the INACTIVE session.**
-            *   Do not change `st.session_state.session_id`.
-            *   Just `st.rerun()` to refresh the list.
-        *   **Scenario B: User deleted the ACTIVE session.**
-            *   The current view is now invalid.
-            *   Logic: Switch to the *next available* session in the list.
-            *   If the list is empty (user deleted the last one), create a new "New Chat" session automatically.
-            *   Update `st.session_state.session_id`.
+    1.  **Backend**: Gọi `repo.delete_session(target_id)`.
+    2.  **Kiểm tra State**:
+        *   **Kịch bản A: Người dùng xóa session KHÔNG ACTIVE.**
+            *   Không thay đổi `st.session_state.session_id`.
+            *   Chỉ `st.rerun()` để refresh danh sách.
+        *   **Kịch bản B: Người dùng xóa session ĐANG ACTIVE.**
+            *   View hiện tại không còn hợp lệ.
+            *   Logic: Chuyển sang session *có sẵn tiếp theo* trong danh sách.
+            *   Nếu danh sách trống (người dùng xóa cái cuối cùng), tự động tạo session "New Chat" mới.
+            *   Cập nhật `st.session_state.session_id`.
             *   `st.rerun()`.
 
-## 5. DETAILED IMPLEMENTATION PLAN
+## 5. KẾ HOẠCH TRIỂN KHAI CHI TIẾT
 
-### Step 1: CSS Tweaks (Optional but Recommended)
-Streamlit columns can sometimes have large gaps. We might need small custom CSS to reduce the padding between the Title button and the Delete button for a cohesive look.
+### Bước 1: CSS Tweaks (Tùy chọn nhưng Khuyến nghị)
+Các columns trong Streamlit đôi khi có khoảng cách lớn. Chúng ta có thể cần CSS tùy chỉnh nhỏ để giảm padding giữa nút Tiêu đề và nút Xóa cho giao diện liền mạch.
 
-### Step 2: Refactor Sidebar Loop
-Modify the `for s in recent_sessions:` loop in `app.py`.
+### Bước 2: Refactor Sidebar Loop
+Sửa đổi vòng lặp `for s in recent_sessions:` trong `app.py`.
 
 **Pseudocode:**
 ```python
 for s in recent_sessions:
     col_nav, col_del = st.columns([0.85, 0.15])
-    
+
     with col_nav:
         # Highlight active
         type_ = "primary" if s.id == st.session_state.session_id else "secondary"
         if st.button(s.title, key=f"nav_{s.id}", type=type_):
             switch_session(s.id)
-            
+
     with col_del:
-        # Use a distinct key
+        # Sử dụng key riêng biệt
         if st.button("🗑", key=f"del_{s.id}", help="Xóa hội thoại này"):
             handle_specific_delete(s.id)
 ```
 
-### Step 3: Update Helper Functions
-Refactor `handle_delete_session` to accept an explicit `target_id` (the one to be deleted) and compare it against `current_id` (the one currently being viewed) to decide if a switch is needed.
+### Bước 3: Cập nhật Helper Functions
+Refactor `handle_delete_session` để nhận một `target_id` rõ ràng (cái cần xóa) và so sánh với `current_id` (cái đang xem) để quyết định có cần chuyển đổi hay không.
 
-## 6. EDGE CASES & RISKS
+## 6. EDGE CASES & RỦI RO
 
-*   **Accidental Deletion**: Since `st.button` is immediate, there is no "Are you sure?" confirmation. 
-    *   *Mitigation*: For this MVP phase, we accept this risk for speed (as per "Quick Delete" requirement). In the future, we can use `st.popover` (if upgrading Streamlit) or a "Undo" toast.
-*   **Long Titles**: Long titles might truncate awkwardly in the 85% width column. Streamlit handles this by ellipsizing, which is acceptable.
-*   **Mobile View**: On very narrow screens, the [0.85, 0.15] ratio might squish the delete button. Streamlit stacks columns on mobile, which might look like "Title" then "Delete" below it.
-    *   *Mitigation*: Check `st.columns` behavior. Usually, it keeps side-by-side on reasonable widths, but stacks on mobile. This is acceptable for now.
+*   **Xóa Nhầm**: Vì `st.button` thực thi ngay lập tức, không có xác nhận "Bạn có chắc chắn?".
+    *   *Giảm thiểu*: Trong giai đoạn MVP này, chúng ta chấp nhận rủi ro này để đổi lấy tốc độ (theo yêu cầu "Xóa Nhanh"). Trong tương lai, chúng ta có thể sử dụng `st.popover` (nếu nâng cấp Streamlit) hoặc toast "Hoàn tác".
+*   **Tiêu đề Dài**: Tiêu đề dài có thể bị cắt xấu trong column 85% width. Streamlit xử lý bằng cách ellipsizing, có thể chấp nhận được.
+*   **Giao diện Mobile**: Trên màn hình rất hẹp, tỷ lệ [0.85, 0.15] có thể làm nút xóa bị bẹp. Streamlit xếp chồng columns trên mobile, có thể trông như "Tiêu đề" rồi "Xóa" bên dưới.
+    *   *Giảm thiểu*: Kiểm tra hành vi `st.columns`. Thông thường, nó giữ side-by-side trên chiều rộng hợp lý, nhưng xếp chồng trên mobile. Điều này có thể chấp nhận cho hiện tại.

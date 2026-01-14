@@ -1,68 +1,54 @@
-<style>
-    /* Force white background and black text for the whole page */
-    body, .vscode-body {
-        background-color: #ffffff !important;
-        color: #000000 !important;
-    }
-    /* Style code blocks to be readable on white */
-    code, pre {
-        background-color: #f0f0f0 !important;
-        color: #222222 !important;
-    }
-</style>
+# Thiết kế: Context Memory & Conversational RAG System
 
-# Designing: Context Memory & Conversational RAG System
+## 1. Bối cảnh & Mục tiêu
+- **Trạng thái hiện tại**: Hệ thống là "Stateless" (không có trạng thái). Mỗi câu hỏi được xử lý như một truy vấn mới. Các câu hỏi tham chiếu đến tin nhắn trước (ví dụ: "Điều đó có áp dụng không?") sẽ thất bại khi Retrieval.
+- **Mục tiêu**: Triển khai **Kiến trúc RAG Hội thoại** để duy trì ngữ cảnh qua các lượt trao đổi.
+- **Khả năng mở rộng**: Bắt đầu với In-Memory storage (MVP) nhưng thiết kế interface tương thích với Persistent Storage (Postgres/Redis) cho tương lai.
 
-## 1. Context & Objective
-- **Current State**: The system is "Stateless". Each query is treated as new. References to previous messages (e.g., "What about that?") fail during Retrieval.
-- **Goal**: Implement a **Conversational RAG Architecture** that retains context across turns.
-- **Scalability**: Start with In-Memory storage (MVP) but design interfaces compatible with Persistent Storage (Postgres/Redis) for future scaling.
+## 2. Kiến trúc Cốt lõi: Conversational RAG
 
-## 2. Core Architecture: Conversational RAG
+Để xử lý câu hỏi tiếp nối chính xác trong hệ thống RAG, chúng ta không thể đơn giản thêm lịch sử vào prompt. Chúng ta phải triển khai bước **"Viết lại Câu hỏi"** (Query Reformulation/Standalone Question generation).
 
-To handle follow-up questions correctly in a RAG system, we cannot simply append history to the prompt. We must implement a **"Query Reformulation"** step (also known as Standalone Question generation).
-
-### 2.1. The Flow (Mermaid)
+### 2.1. Luồng xử lý (Mermaid)
 
 ```mermaid
-%%{init: {'theme': 'default', 'themeVariables': { 'background': '#ffffff' }}}%%
 sequenceDiagram
-    participant User
+    participant U as Người dùng
     participant App as App (Streamlit)
     participant Memory as ChatHistory Store
     participant Rewriter as LLM (Rewriter)
-    participant Retriever
+    participant Retriever as Retriever
     participant Generator as LLM (Answer)
 
-    User->>App: Send Query ("Does it apply to men?")
-    App->>Memory: Get Session History
-    Memory-->>App: Returns [User: ..., AI: ...]
-    
+    U->>App: Gửi câu hỏi ("Điều đó có áp dụng cho nam không?")
+    App->>Memory: Lấy lịch sử Session
+    Memory-->>App: Trả về [User: ..., AI: ...]
+
     rect rgb(255, 240, 240)
-        Note over App, Rewriter: Step 1: Contextualize
-        App->>Rewriter: Rewrite(Query + History)
-        Rewriter-->>App: Standalone Query ("Does maternity leave apply to men?")
-    end
-    
-    rect rgb(240, 240, 255)
-        Note over App, Generator: Step 2: RAG Standard Flow
-        App->>Retriever: Search(Standalone Query)
-        Retriever-->>App: Documents
-        App->>Generator: Answer(Original Query + Docs + History)
-        Generator-->>App: Final Answer
+        Note over App, Rewriter: Bước 1: Ngữ cảnh hóa
+        App->>Rewriter: Viết lại(Query + History)
+        Rewriter-->>App: Câu hỏi độc lập ("Chế độ thai sản có áp dụng cho nam không?")
     end
 
-    App->>Memory: Save(User Query, Final Answer)
-    App-->>User: Display Answer
+    rect rgb(240, 240, 255)
+        Note over App, Generator: Bước 2: Luồng RAG Chuẩn
+        App->>Retriever: Tìm kiếm(Standalone Query)
+        Retriever-->>App: Documents
+        App->>Generator: Trả lời(Original Query + Docs + History)
+        Generator-->>App: Câu trả lời cuối
+    end
+
+    App->>Memory: Lưu(User Query, Final Answer)
+    App-->>U: Hiển thị câu trả lời
 ```
 
-## 3. Detailed Components
+## 3. Chi tiết Các Thành phần
 
 ### 3.1. Memory Interface (Abstraction)
-To ensure scalability, we define an interface. The MVP uses a Python Dictionary; the Production version uses a Database.
+Để đảm bảo khả năng mở rộng, chúng ta định nghĩa một interface. MVP sử dụng Python Dictionary; Production sử dụng Database.
 
 ```python
-# Conceptual Interface
+# Interface Khái niệm
 class BaseHistoryStore:
     def get_messages(self, session_id: str) -> List[BaseMessage]:
         pass
@@ -71,52 +57,52 @@ class BaseHistoryStore:
     def add_ai_message(self, session_id: str, message: str):
         pass
 
-# MVP Implementation (In-Memory)
+# Triển khai MVP (In-Memory)
 class InMemoryHistory(BaseHistoryStore):
     def __init__(self):
         self._store = {} # {session_id: ChatMessageHistory}
 ```
 
-### 3.2. Query Rewriter (The "Smarter" Part)
-A focused prompt just for reformulating the question. It does *not* answer the question.
+### 3.2. Query Rewriter (Phần "Thông minh")
+Một prompt tập trung chỉ để viết lại câu hỏi. Nó *không* trả lời câu hỏi.
 
-*   **Prompt**: "Given a chat history and the latest user question which might reference context in the chat history, formulate a standalone question which can be understood without the chat history. Do NOT answer the question, just reformulate it if needed and otherwise return it as is."
+*   **Prompt**: "Với lịch sử chat và câu hỏi mới nhất của người dùng có thể tham chiếu đến ngữ cảnh trong lịch sử, hãy tạo một câu hỏi độc lập có thể hiểu được mà không cần lịch sử chat. KHÔNG trả lời câu hỏi, chỉ viết lại nếu cần, nếu không trả về nguyên gốc."
 
-### 3.3. Database Schema (Future Scale-up)
-When moving to SQL (PostgreSQL), the schema will look like this:
+### 3.3. Database Schema (Mở rộng trong tương lai)
+Khi chuyển sang SQL (PostgreSQL), schema sẽ như sau:
 
-**Table: `chat_sessions`**
-| Column | Type | Description |
+**Bảng: `chat_sessions`**
+| Cột | Kiểu | Mô tả |
 |---|---|---|
-| `id` | UUID | Primary Key |
-| `user_id` | UUID | Owner |
-| `created_at` | Timestamp | |
+| `id` | UUID | Khóa chính |
+| `user_id` | UUID | Người sở hữu |
+| `created_at` | Timestamp | Thời gian tạo |
 
-**Table: `chat_messages`**
-| Column | Type | Description |
+**Bảng: `chat_messages`**
+| Cột | Kiểu | Mô tả |
 |---|---|---|
-| `id` | UUID | Primary Key |
-| `session_id` | UUID | FK to chat_sessions |
-| `role` | VARCHAR | 'user' or 'assistant' |
-| `content` | TEXT | The message content |
-| `created_at` | Timestamp | For ordering context |
+| `id` | UUID | Khóa chính |
+| `session_id` | UUID | FK đến chat_sessions |
+| `role` | VARCHAR | 'user' hoặc 'assistant' |
+| `content` | TEXT | Nội dung tin nhắn |
+| `created_at` | Timestamp | Để sắp xếp ngữ cảnh |
 
-## 4. Implementation Plan (MVP)
+## 4. Kế hoạch Triển khai (MVP)
 
-### Phase 1: Infrastructure
-1.  **Define `HistoryManager`**: Create `src/utils/history_manager.py` to handle `InMemoryHistory`.
-2.  **Update Config**: Add settings for `MAX_HISTORY_LENGTH` (e.g., last 10 messages) to manage token limits.
+### Giai đoạn 1: Cơ sở hạ tầng
+1.  **Định nghĩa `HistoryManager`**: Tạo `src/utils/history_manager.py` để xử lý `InMemoryHistory`.
+2.  **Cập nhật Config**: Thêm cài đặt cho `MAX_HISTORY_LENGTH` (ví dụ: 10 tin nhắn gần nhất) để quản lý giới hạn token.
 
-### Phase 2: RAG Engine Upgrade
-1.  **Add `CondenseQuestionChain`**: Create a new chain in `rag_engine` responsible for rewriting queries.
-2.  **Update `RAGChain`**: 
-    - Accept `session_id`.
-    - Coordinate the flow: Get History -> Rewrite -> Retrieve -> Answer -> Save History.
+### Giai đoạn 2: Nâng cấp RAG Engine
+1.  **Thêm `CondenseQuestionChain`**: Tạo chain mới trong `rag_engine` chịu trách nhiệm viết lại câu hỏi.
+2.  **Cập nhật `RAGChain`**:
+    - Nhận `session_id`.
+    - Điều phối luồng: Lấy History -> Viết lại -> Truy xuất -> Trả lời -> Lưu History.
 
-### Phase 3: UI Integration
-1.  **Session State**: Use Streamlit's `st.session_state` to store `session_id`.
-2.  **Display**: Ensure the UI passes the session ID to the backend.
+### Giai đoạn 3: Tích hợp UI
+1.  **Session State**: Sử dụng `st.session_state` của Streamlit để lưu `session_id`.
+2.  **Hiển thị**: Đảm bảo UI truyền session ID đến backend.
 
-## 5. Security & Governance
-- **Privacy**: History contains sensitive user data. In Production, this must be encrypted at rest.
-- **Governance**: Limit history size (Token Window) to prevent context overflow and reduce API costs.
+## 5. Bảo mật & Quản trị
+- **Quyền riêng tư**: Lịch sử chứa dữ liệu nhạy cảm của người dùng. Trong Production, cần được mã hóa khi lưu trữ.
+- **Quản trị**: Giới hạn kích thước lịch sử (Token Window) để tránh tràn ngữ cảnh và giảm chi phí API.

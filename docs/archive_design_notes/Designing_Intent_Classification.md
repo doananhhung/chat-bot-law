@@ -1,16 +1,3 @@
-<style>
-    /* Force white background and black text for the whole page */
-    body, .vscode-body {
-        background-color: #ffffff !important;
-        color: #000000 !important;
-    }
-    /* Style code blocks to be readable on white */
-    code, pre {
-        background-color: #f0f0f0 !important;
-        color: #222222 !important;
-    }
-</style>
-
 # Bản Thiết Kế: Hệ Thống Phân Loại Ý Định & Xử Lý Câu Hỏi Ngoài Lề
 
 ## 1. Tổng quan (Context)

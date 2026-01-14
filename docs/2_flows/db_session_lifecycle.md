@@ -2,6 +2,71 @@
 
 Tài liệu này giải thích cách dữ liệu hội thoại được khởi tạo, lưu trữ và truy xuất.
 
+## Sơ đồ Tổng quan
+
+```mermaid
+stateDiagram-v2
+    [*] --> AppStart: Khởi động ứng dụng
+    AppStart --> CheckDB: Kiểm tra DB
+
+    state CheckDB <<choice>>
+    CheckDB --> CreateTables: Chưa có DB
+    CheckDB --> Ready: DB đã tồn tại
+    CreateTables --> Ready
+
+    Ready --> NewSession: User bấm "New Chat"
+    Ready --> LoadSession: User chọn phiên cũ
+
+    NewSession --> ActiveSession: Tạo UUID mới
+    LoadSession --> ActiveSession: Load messages
+
+    ActiveSession --> SaveMessage: User/AI gửi tin nhắn
+    SaveMessage --> ActiveSession
+
+    ActiveSession --> DeleteSession: User xóa phiên
+    DeleteSession --> Ready
+```
+
+```mermaid
+sequenceDiagram
+    participant U as Người dùng
+    participant UI as Streamlit UI
+    participant State as Session State
+    participant Repo as ChatRepository
+    participant DB as SQLite Database
+
+    Note over UI,DB: 1. Khởi tạo Ứng dụng
+    UI->>Repo: init_db()
+    Repo->>DB: CREATE TABLE IF NOT EXISTS
+    DB-->>Repo: OK
+    Repo-->>UI: Database ready
+
+    Note over UI,DB: 2. Tạo Phiên Chat Mới
+    U->>UI: Bấm "New Chat"
+    UI->>Repo: create_session()
+    Repo->>DB: INSERT INTO chat_sessions
+    DB-->>Repo: session_id (UUID)
+    Repo-->>UI: Session object
+    UI->>State: session_id = new_id
+
+    Note over UI,DB: 3. Lưu Tin nhắn
+    U->>UI: Gửi câu hỏi
+    UI->>Repo: add_message(session_id, "user", content)
+    Repo->>DB: INSERT INTO chat_messages
+    UI->>UI: Xử lý RAG...
+    UI->>Repo: add_message(session_id, "assistant", answer, sources)
+    Repo->>DB: INSERT INTO chat_messages
+
+    Note over UI,DB: 4. Tải Lịch sử
+    U->>UI: Chọn phiên cũ từ Sidebar
+    UI->>Repo: get_messages(session_id)
+    Repo->>DB: SELECT * FROM chat_messages WHERE session_id=?
+    DB-->>Repo: List[Message]
+    Repo-->>UI: Messages
+    UI->>State: messages = loaded_messages
+    UI-->>U: Hiển thị lịch sử chat
+```
+
 ## 1. Khởi tạo Ứng dụng (App Initialization)
 Khi ứng dụng khởi động (`app.py`):
 1.  Gọi `init_db()` từ `src.database.engine`.

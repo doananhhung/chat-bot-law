@@ -4,7 +4,45 @@ Tài liệu này mô tả chi tiết cách hệ thống xử lý một câu hỏ
 
 ## Sơ đồ Tuần tự (Sequence Diagram)
 
-*(Vị trí để vẽ Mermaid Diagram mô tả luồng: User -> UI -> RAG Engine -> Vector DB -> LLM -> UI)*
+```mermaid
+sequenceDiagram
+    participant U as Người dùng
+    participant UI as Streamlit UI
+    participant Router as Intent Router
+    participant RAG as RAG Engine
+    participant VDB as Vector DB (FAISS)
+    participant LLM as Gemini/Groq
+
+    U->>UI: Nhập câu hỏi
+    UI->>Router: Phân loại ý định
+    Router->>LLM: Classify(query)
+    LLM-->>Router: LEGAL / GENERAL
+
+    alt Ý định là LEGAL
+        Router->>RAG: Xử lý RAG Pipeline
+
+        Note over RAG: Bước 1: Rewriting (nếu cần)
+        RAG->>LLM: Viết lại câu hỏi với context
+        LLM-->>RAG: Standalone question
+
+        Note over RAG: Bước 2: Retrieval
+        RAG->>VDB: Similarity Search (top-k)
+        VDB-->>RAG: Relevant chunks + metadata
+
+        Note over RAG: Bước 3: Generation
+        RAG->>LLM: System Prompt + Context + Query
+        LLM-->>RAG: Câu trả lời (streaming)
+
+        RAG-->>UI: Answer + Sources
+    else Ý định là GENERAL
+        Router->>LLM: Trả lời xã giao
+        LLM-->>Router: Response
+        Router-->>UI: Câu trả lời thân thiện
+    end
+
+    UI->>UI: Lưu tin nhắn vào Database
+    UI-->>U: Hiển thị kết quả
+```
 
 ## Các bước xử lý chi tiết
 

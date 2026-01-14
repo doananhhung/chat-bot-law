@@ -1,28 +1,15 @@
-<style>
-    /* Force white background and black text for the whole page */
-    body, .vscode-body {
-        background-color: #ffffff !important;
-        color: #000000 !important;
-    }
-    /* Style code blocks to be readable on white */
-    code, pre {
-        background-color: #f0f0f0 !important;
-        color: #222222 !important;
-    }
-</style>
-
-# DESIGN DOCUMENT: PERSISTENT CHAT MEMORY SYSTEM
-**Date:** 2026-01-13
-**Status:** DRAFT
-**Context:** Upgrade from In-Memory/Session State to Database Persistence.
+# TÀI LIỆU THIẾT KẾ: HỆ THỐNG LƯU TRỮ LỊCH SỬ CHAT
+**Ngày:** 2026-01-13
+**Trạng thái:** DRAFT
+**Bối cảnh:** Nâng cấp từ In-Memory/Session State sang Database Persistence.
 
 ---
 
-## 1. ARCHITECTURAL OVERVIEW
-The current system stores chat history in `st.session_state` (RAM). This limits history to the active browser tab and is lost on refresh (partially mitigated by recent caches, but not persistent).
-We will introduce a **Persistence Layer** using **SQLite** (Dev) / **PostgreSQL** (Prod) managed by **SQLAlchemy**.
+## 1. TỔNG QUAN KIẾN TRÚC
+Hệ thống hiện tại lưu trữ lịch sử chat trong `st.session_state` (RAM). Điều này giới hạn lịch sử trong tab trình duyệt đang hoạt động và sẽ bị mất khi refresh (đã được giảm thiểu một phần bởi cache gần đây, nhưng không persistent).
+Chúng ta sẽ giới thiệu một **Persistence Layer** sử dụng **SQLite** (Dev) / **PostgreSQL** (Prod) được quản lý bởi **SQLAlchemy**.
 
-### 1.1. High-Level Layers
+### 1.1. Các tầng High-Level
 ```mermaid
 graph TD
     UI[Streamlit UI] <--> Service[Chat Service]
@@ -33,111 +20,111 @@ graph TD
 
 ---
 
-## 2. DATABASE SCHEMA DESIGN
+## 2. THIẾT KẾ DATABASE SCHEMA
 
-We will use a normalized relational schema.
+Chúng ta sẽ sử dụng schema quan hệ chuẩn hóa.
 
-### 2.1. Entity Relationship Diagram (ERD)
+### 2.1. Sơ đồ Quan hệ Thực thể (ERD)
 
 ```mermaid
 erDiagram
-    SESSIONS ||--o{ MESSAGES : contains
+    SESSIONS ||--o{ MESSAGES : chứa
     SESSIONS {
         UUID id PK
         STRING title
         DATETIME created_at
         DATETIME updated_at
-        JSON metadata "User info, preferences"
+        JSON metadata "Thông tin user, preferences"
     }
     MESSAGES {
         UUID id PK
         UUID session_id FK
         ENUM role "user, assistant, system"
         TEXT content
-        JSON sources "List of citations used"
+        JSON sources "Danh sách trích dẫn"
         DATETIME created_at
         FLOAT processing_time
     }
 ```
 
-### 2.2. Table Specifications
+### 2.2. Chi tiết Bảng
 
-#### Table: `chat_sessions`
-| Column | Type | Constraints | Description |
+#### Bảng: `chat_sessions`
+| Cột | Kiểu | Ràng buộc | Mô tả |
 |---|---|---|---|
 | `id` | VARCHAR(36) | PK, Not Null | UUID v4 |
-| `title` | VARCHAR(255) | Nullable | Auto-generated from first query |
-| `created_at` | DATETIME | Default: UTC Now | |
-| `updated_at` | DATETIME | On Update: UTC Now | For sorting "Recent Chats" |
-| `metadata` | JSON | Default: `{}` | Store extra flags (e.g. `model_used`) |
+| `title` | VARCHAR(255) | Nullable | Tự động tạo từ câu hỏi đầu tiên |
+| `created_at` | DATETIME | Default: UTC Now | Thời gian tạo |
+| `updated_at` | DATETIME | On Update: UTC Now | Để sắp xếp "Chat Gần đây" |
+| `metadata` | JSON | Default: `{}` | Lưu các flag bổ sung (ví dụ: `model_used`) |
 
-#### Table: `chat_messages`
-| Column | Type | Constraints | Description |
+#### Bảng: `chat_messages`
+| Cột | Kiểu | Ràng buộc | Mô tả |
 |---|---|---|---|
 | `id` | VARCHAR(36) | PK, Not Null | UUID v4 |
 | `session_id` | VARCHAR(36) | FK -> chat_sessions.id | Indexed |
 | `role` | VARCHAR(20) | Not Null | `user`, `assistant`, `system` |
-| `content` | TEXT | Not Null | The actual message |
-| `original_query` | TEXT | Nullable | If `role=assistant`, stores what user asked |
-| `sources` | JSON | Default: `[]` | Snapshot of used docs (Title, Page, Snippet) |
-| `created_at` | DATETIME | Default: UTC Now | |
-| `rating` | INTEGER | Nullable | 1 (Like) or -1 (Dislike) |
+| `content` | TEXT | Not Null | Nội dung tin nhắn thực tế |
+| `original_query` | TEXT | Nullable | Nếu `role=assistant`, lưu câu hỏi của user |
+| `sources` | JSON | Default: `[]` | Snapshot của docs đã dùng (Tiêu đề, Trang, Đoạn trích) |
+| `created_at` | DATETIME | Default: UTC Now | Thời gian tạo |
+| `rating` | INTEGER | Nullable | 1 (Thích) hoặc -1 (Không thích) |
 
 ---
 
-## 3. API DESIGN (INTERNAL SERVICE CONTRACT)
+## 3. THIẾT KẾ API (HỢP ĐỒNG SERVICE NỘI BỘ)
 
-Since we are currently a Monolith (Streamlit), these "Endpoints" are implemented as **Service Methods**. However, they are designed to be instantly exposable via **FastAPI** in the future.
+Vì chúng ta hiện tại là Monolith (Streamlit), các "Endpoint" này được triển khai như **Service Methods**. Tuy nhiên, chúng được thiết kế để có thể expose ngay lập tức qua **FastAPI** trong tương lai.
 
-### 3.1. Session Management
+### 3.1. Quản lý Session
 
 #### `POST /api/sessions`
-*   **Action**: Create a new chat session.
+*   **Hành động**: Tạo phiên chat mới.
 *   **Input**: `{"user_id": "optional", "meta": {...}}`
 *   **Output**: `{"session_id": "uuid", "created_at": "..."}`
 
 #### `GET /api/sessions`
-*   **Action**: List all recent conversations.
+*   **Hành động**: Liệt kê tất cả cuộc hội thoại gần đây.
 *   **Params**: `limit=20`, `offset=0`
 *   **Output**: `[{"id": "...", "title": "Luật lao động...", "updated_at": "..."}]`
 
 #### `DELETE /api/sessions/{session_id}`
-*   **Action**: Delete a conversation (Soft delete preferred).
+*   **Hành động**: Xóa cuộc hội thoại (Ưu tiên soft delete).
 
 #### `PATCH /api/sessions/{session_id}`
-*   **Action**: Rename title manually.
-*   **Input**: `{"title": "New Name"}`
+*   **Hành động**: Đổi tên tiêu đề thủ công.
+*   **Input**: `{"title": "Tên mới"}`
 
-### 3.2. Message Operations
+### 3.2. Thao tác Tin nhắn
 
 #### `GET /api/sessions/{session_id}/messages`
-*   **Action**: Load full history for the UI.
-*   **Output**: List of Message Objects ordered by `created_at` ASC.
+*   **Hành động**: Tải toàn bộ lịch sử cho UI.
+*   **Output**: Danh sách Message Objects sắp xếp theo `created_at` ASC.
 
 #### `POST /api/sessions/{session_id}/messages`
-*   **Action**: User sends a message -> Triggers RAG -> Saves User Msg -> Saves AI Response.
-*   **Input**: `{"content": "User question"}`
-*   **Output**: 
+*   **Hành động**: User gửi tin nhắn -> Kích hoạt RAG -> Lưu User Msg -> Lưu AI Response.
+*   **Input**: `{"content": "Câu hỏi của user"}`
+*   **Output**:
     ```json
     {
       "user_message": {...},
       "ai_message": {
-        "content": "Answer...",
+        "content": "Câu trả lời...",
         "sources": [...]
       }
     }
     ```
 
 #### `POST /api/messages/{message_id}/feedback`
-*   **Action**: Rate an answer.
-*   **Input**: `{"rating": 1, "comment": "Good answer"}`
+*   **Hành động**: Đánh giá câu trả lời.
+*   **Input**: `{"rating": 1, "comment": "Câu trả lời tốt"}`
 
 ---
 
-## 4. CRUD IMPLEMENTATION PLAN
+## 4. KẾ HOẠCH TRIỂN KHAI CRUD
 
-### 4.1. The Repository Interface (`src/database/repository.py`)
-To ensure Clean Architecture, the UI never touches the DB directly.
+### 4.1. Repository Interface (`src/database/repository.py`)
+Để đảm bảo Clean Architecture, UI không bao giờ chạm trực tiếp vào DB.
 
 ```python
 from abc import ABC, abstractmethod
@@ -145,52 +132,52 @@ from abc import ABC, abstractmethod
 class BaseChatRepository(ABC):
     @abstractmethod
     def create_session(self, title: str = None) -> Session: pass
-    
+
     @abstractmethod
     def get_session(self, session_id: str) -> Session: pass
-    
+
     @abstractmethod
     def get_recent_sessions(self, limit: int = 10) -> List[Session]: pass
-    
+
     @abstractmethod
     def add_message(self, session_id: str, role: str, content: str, sources: list = None) -> Message: pass
-    
+
     @abstractmethod
     def get_messages(self, session_id: str) -> List[Message]: pass
 ```
 
-### 4.2. Technology Stack Selection
-1.  **ORM**: **SQLAlchemy 2.0** (Async support ready).
-2.  **Migration**: **Alembic** (Crucial for schema evolution).
-3.  **Database**: 
+### 4.2. Lựa chọn Technology Stack
+1.  **ORM**: **SQLAlchemy 2.0** (Hỗ trợ Async sẵn sàng).
+2.  **Migration**: **Alembic** (Quan trọng cho schema evolution).
+3.  **Database**:
     *   **Dev**: SQLite (`chat_history.db`).
     *   **Prod**: PostgreSQL.
 
-### 4.3. Integration with RAG Engine
-*   **Current**: `app.py` manages state.
-*   **New**: `ChatService` orchestrates.
+### 4.3. Tích hợp với RAG Engine
+*   **Hiện tại**: `app.py` quản lý state.
+*   **Mới**: `ChatService` điều phối.
     1.  User input -> `ChatService.process_message(session_id, input)`.
-    2.  `ChatService` calls `ChatRepository.add_message(role='user')`.
-    3.  `ChatService` fetches history from Repo -> formats for LLM.
-    4.  `ChatService` calls `RAGChain.generate()`.
-    5.  `ChatService` calls `ChatRepository.add_message(role='assistant', sources=...)`.
-    6.  `ChatService` updates `Session.updated_at`.
+    2.  `ChatService` gọi `ChatRepository.add_message(role='user')`.
+    3.  `ChatService` lấy history từ Repo -> format cho LLM.
+    4.  `ChatService` gọi `RAGChain.generate()`.
+    5.  `ChatService` gọi `ChatRepository.add_message(role='assistant', sources=...)`.
+    6.  `ChatService` cập nhật `Session.updated_at`.
 
 ---
 
-## 5. MIGRATION STEPS (Roadmap)
+## 5. CÁC BƯỚC MIGRATION (Roadmap)
 
 1.  **Setup Infrastructure**:
     *   `pip install sqlalchemy alembic`
-    *   Initialize Alembic config.
-2.  **Implement Models**:
-    *   Create `src/database/models.py`.
-    *   Define `Session` and `Message` classes.
-3.  **Implement Repository**:
-    *   Create `src/database/sqlite_repo.py`.
+    *   Khởi tạo cấu hình Alembic.
+2.  **Triển khai Models**:
+    *   Tạo `src/database/models.py`.
+    *   Định nghĩa class `Session` và `Message`.
+3.  **Triển khai Repository**:
+    *   Tạo `src/database/sqlite_repo.py`.
 4.  **Refactor App**:
-    *   Replace `st.session_state.chat_history` with API calls to `ChatRepository`.
-    *   Add "History Sidebar" to UI to switch sessions.
+    *   Thay thế `st.session_state.chat_history` bằng API calls đến `ChatRepository`.
+    *   Thêm "History Sidebar" vào UI để chuyển đổi sessions.
 
 ---
-**Signed:** Principal Evolutionary Architect
+**Ký tên:** Principal Evolutionary Architect

@@ -1,17 +1,4 @@
-<style>
-    /* Force white background and black text for the whole page */
-    body, .vscode-body {
-        background-color: #ffffff !important;
-        color: #000000 !important;
-    }
-    /* Style code blocks to be readable on white */
-    code, pre {
-        background-color: #f0f0f0 !important;
-        color: #222222 !important;
-    }
-</style>
-
-# 📄 Thiết kế: Cơ chế Cập nhật Tăng phân (Incremental Indexing)
+# Thiết kế: Cơ chế Cập nhật Tăng phân (Incremental Indexing)
 
 ## 1. Mục tiêu
 Thay thế cơ chế "Xóa và Xây lại" (Full Rebuild) hiện tại bằng cơ chế "Cập nhật phần bù" (Incremental Update). Mục tiêu là tối ưu hóa hiệu suất khi thêm/sửa/xóa một vài bộ luật trong kho dữ liệu lớn mà không cần xử lý lại toàn bộ tài liệu.

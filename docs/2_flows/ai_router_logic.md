@@ -26,15 +26,36 @@ User: "Hôm nay trời đẹp không?" -> Output: GENERAL
 ```
 
 ## Luồng Dữ liệu
-User Input -> **Router LLM** -> (Decision)
-                    |
-           +--------+--------+
-           |                 |
-      [LEGAL]           [GENERAL]
-         |                   |
-    RAG Engine          Basic LLM Chat
-         |                   |
-         +--------+----------+
-                  |
-             Final Output
+
+```mermaid
+flowchart TD
+    A[User Input] --> B[Router LLM]
+    B --> C{Phân loại}
+    C -->|LEGAL| D[RAG Engine]
+    C -->|GENERAL| E[Basic LLM Chat]
+    D --> F[Final Output]
+    E --> F
+```
+
+```mermaid
+sequenceDiagram
+    participant U as Người dùng
+    participant R as Intent Router
+    participant RAG as RAG Engine
+    participant LLM as LLM (Gemini/Groq)
+
+    U->>R: Gửi câu hỏi
+    R->>LLM: Phân loại ý định (LEGAL/GENERAL?)
+    LLM-->>R: Kết quả phân loại
+
+    alt LEGAL_QUERY
+        R->>RAG: Chuyển tiếp câu hỏi
+        RAG->>RAG: Truy xuất tài liệu + Tạo câu trả lời
+        RAG-->>U: Câu trả lời pháp lý + Nguồn tham khảo
+    else GENERAL_CHAT
+        R->>LLM: Trả lời trực tiếp (không cần RAG)
+        LLM-->>U: Câu trả lời thân thiện
+    else AMBIGUOUS
+        R-->>U: Yêu cầu làm rõ câu hỏi
+    end
 ```
