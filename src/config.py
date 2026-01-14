@@ -42,6 +42,11 @@ class AppConfig:
     # Default to use the same provider/model as main if not specified
     ROUTER_PROVIDER = os.getenv("ROUTER_PROVIDER", "google")
     ROUTER_MODEL_NAME = os.getenv("ROUTER_MODEL_NAME", "gemini-2.5-flash-lite")
+
+    # Rewriter (Query Reformulation)
+    # Default to use the same provider/model as main if not specified
+    REWRITER_PROVIDER = os.getenv("REWRITER_PROVIDER", LLM_PROVIDER)
+    REWRITER_MODEL_NAME = os.getenv("REWRITER_MODEL_NAME", LLM_MODEL_NAME)
     
     # Ollama Specific (for self-hosting)
     OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")

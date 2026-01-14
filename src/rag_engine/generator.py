@@ -38,9 +38,14 @@ class RAGChain:
         )
         self.router = IntentRouter(self.router_llm)
         self.general_chain = GENERAL_PROMPT | self.router_llm | StrOutputParser()
-        
-        # 3. Initialize Query Rewriter Chain
-        self.condense_question_chain = CONDENSE_QUESTION_PROMPT | self.llm | StrOutputParser()
+
+        # 3. Initialize Rewriter LLM (for Query Reformulation)
+        self.rewriter_llm = LLMFactory.create_llm(
+            provider=AppConfig.REWRITER_PROVIDER,
+            model_name=AppConfig.REWRITER_MODEL_NAME,
+            temperature=0.0
+        )
+        self.condense_question_chain = CONDENSE_QUESTION_PROMPT | self.rewriter_llm | StrOutputParser()
         
     def generate_answer(self, query: str, chat_history_str: str = "") -> Dict[str, Any]:
         """

@@ -463,3 +463,38 @@ flowchart LR
     CheckActive -- Yes --> SwitchNext[Switch to Next/New]
     CheckActive -- No --> Rerun[Refresh List]
 ```
+
+## [2026-01-14] Task: Separate Rewriter LLM Configuration
+### 1. Architectural Decision (ADR)
+- **Context**: The Query Rewriter was sharing the same LLM instance as the Main Generator (`self.llm`). Since rewriting is a simple paraphrase task that runs **first** in the pipeline, using a heavy model adds unnecessary latency.
+- **Decision**: Implemented **Dedicated Rewriter LLM** with separate configuration.
+    - **Config**: Added `REWRITER_PROVIDER` and `REWRITER_MODEL_NAME` to `AppConfig`.
+    - **Generator**: Created `self.rewriter_llm` as a separate LLM instance in `RAGChain.__init__()`.
+    - **Default Behavior**: Falls back to `LLM_PROVIDER` / `LLM_MODEL_NAME` if not specified.
+- **Impact**:
+    - **Flexibility**: Each component (Generator, Router, Rewriter) can be independently tuned.
+    - **Consistency**: Follows the same pattern as Router config.
+- **Note**: Initial testing with `openai/gpt-oss-20b` showed lower quality than `kimi-k2`. Reverted Rewriter to use `kimi-k2-instruct-0905` for better reformulation accuracy.
+
+### 2. Flow Visualization (Mermaid)
+```mermaid
+%%{init: {'theme': 'default', 'themeVariables': { 'background': '#ffffff' }}}%%
+classDiagram
+    class RAGChain {
+        -llm: Main Generator
+        -router_llm: Intent Router
+        -rewriter_llm: Query Rewriter
+        +generate_answer()
+    }
+    class AppConfig {
+        +LLM_PROVIDER
+        +LLM_MODEL_NAME
+        +ROUTER_PROVIDER
+        +ROUTER_MODEL_NAME
+        +REWRITER_PROVIDER
+        +REWRITER_MODEL_NAME
+    }
+
+    RAGChain --> AppConfig : Reads config
+    note for RAGChain "Each LLM can use different provider/model"
+```
