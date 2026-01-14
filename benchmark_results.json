@@ -1,0 +1,26 @@
+{
+  "benchmark_time": "2026-01-14T23:07:36.435553",
+  "config": {
+    "vector_index_type": "flat",
+    "ivf_nlist": 64,
+    "ivf_nprobe": 8
+  },
+  "current_index": {
+    "index_info": {
+      "index_type": "ivf",
+      "ntotal": 1530,
+      "dimension": 768,
+      "nlist": 64,
+      "nprobe": 8
+    },
+    "latency": {
+      "avg_ms": 86.90961000065727,
+      "min_ms": 72.76800000181538,
+      "max_ms": 108.73230000288459,
+      "std_ms": 11.512716760704588,
+      "p50_ms": 84.48005000172998,
+      "p95_ms": 108.27694500130747
+    },
+    "timestamp": "2026-01-14T23:08:01.199147"
+  }
+}

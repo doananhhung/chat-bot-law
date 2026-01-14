@@ -32,6 +32,30 @@ class AppConfig:
     # Text Splitting
     CHUNK_SIZE = 1000
     CHUNK_OVERLAP = 200
+
+    # --- FAISS Index Configuration ---
+    # Index type: "flat" (exact search), "ivf" (approximate), "ivfpq" (approximate + compression)
+    VECTOR_INDEX_TYPE = os.getenv("VECTOR_INDEX_TYPE", "flat")
+
+    # IVF-specific parameters
+    IVF_NLIST = int(os.getenv("IVF_NLIST", "64"))    # Number of clusters (Voronoi cells)
+    IVF_NPROBE = int(os.getenv("IVF_NPROBE", "8"))   # Number of clusters to search at query time
+
+    # Embedding dimension (must match embedding model output)
+    EMBEDDING_DIMENSION = 768  # vietnamese-bi-encoder outputs 768D vectors
+
+    @classmethod
+    def get_index_factory_string(cls) -> str:
+        """Generate FAISS index factory string based on configuration."""
+        if cls.VECTOR_INDEX_TYPE == "flat":
+            return "Flat"
+        elif cls.VECTOR_INDEX_TYPE == "ivf":
+            return f"IVF{cls.IVF_NLIST},Flat"
+        elif cls.VECTOR_INDEX_TYPE == "ivfpq":
+            # PQ48 = 768/16 subvectors, x8 = 8-bit codes
+            return f"IVF{cls.IVF_NLIST},PQ48x8"
+        else:
+            raise ValueError(f"Unknown VECTOR_INDEX_TYPE: {cls.VECTOR_INDEX_TYPE}. Use 'flat', 'ivf', or 'ivfpq'.")
     
     # --- LLM Factory Config ---
     # Main Generator (RAG)
