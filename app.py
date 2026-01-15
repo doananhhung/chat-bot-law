@@ -19,8 +19,10 @@ st.set_page_config(page_title="Trợ lý Luật Lao Động AI", layout="wide")
 # --- Database Initialization ---
 try:
     init_db()
+    AppConfig.validate()  # Validate LLM configuration on startup
 except Exception as e:
-    logger.error(f"Failed to initialize database: {e}")
+    logger.error(f"Failed to initialize: {e}")
+    raise e
 
 # --- Helper Functions ---
 @st.cache_resource(show_spinner="Đang khởi động Model & Index...")
@@ -127,119 +129,120 @@ if "session_id" not in st.session_state:
 # --- Main UI ---
 st.title("🤖 Trợ lý AI Tra cứu Pháp Luật")
 
-# Database Connection for this run
+# Database Connection for this run (with proper cleanup)
 db = get_db_session()
-repo = ChatRepository(db)
+try:
+    repo = ChatRepository(db)
 
-# Sidebar
-with st.sidebar:
-    st.header("🗂️ Quản lý Hội thoại")
-    
-    if st.button("➕ Cuộc hội thoại mới", use_container_width=True):
-        new_session = repo.create_session(title="Cuộc hội thoại mới")
-        st.session_state.session_id = new_session.id
-        st.rerun()
-        
-    st.divider()
-    st.subheader("Gần đây")
-    
-    recent_sessions = repo.get_recent_sessions(limit=10)
-    for s in recent_sessions:
-        col_nav, col_del = st.columns([0.8, 0.2])
-        
-        with col_nav:
-            # Highlight active session
-            button_type = "primary" if s.id == st.session_state.session_id else "secondary"
-            label = s.title if s.title else "Không tiêu đề"
-            if st.button(f"💬 {label}", key=f"nav_{s.id}", type=button_type, use_container_width=True):
-                st.session_state.session_id = s.id
-                st.rerun()
-                
-        with col_del:
-             if st.button("✕", key=f"del_{s.id}", help="Xóa hội thoại này", use_container_width=True):
-                handle_delete_session(repo, s.id)
+    # Sidebar
+    with st.sidebar:
+        st.header("🗂️ Quản lý Hội thoại")
 
-    st.divider()
-    with st.expander("⚙️ Quản lý Dữ liệu"):
-        st.info(f"Nguồn: `{AppConfig.RAW_DATA_PATH}`")
-        if st.button("🔄 Cập nhật Index"):
-            build_index()
-        
+        if st.button("➕ Cuộc hội thoại mới", use_container_width=True):
+            new_session = repo.create_session(title="Cuộc hội thoại mới")
+            st.session_state.session_id = new_session.id
+            st.rerun()
+
         st.divider()
-            
-        if st.button("🔥 Xóa toàn bộ dữ liệu chat", type="primary", use_container_width=True):
-             handle_delete_all_sessions(repo)
+        st.subheader("Gần đây")
 
-# Main Chat Area
-current_session_id = st.session_state.session_id
-messages = repo.get_messages(current_session_id)
+        recent_sessions = repo.get_recent_sessions(limit=10)
+        for s in recent_sessions:
+            col_nav, col_del = st.columns([0.8, 0.2])
 
-# Display History
-for msg in messages:
-    with st.chat_message(msg.role):
-        st.markdown(msg.content)
-        if msg.role == "assistant" and msg.sources:
-            display_sources(msg.sources)
+            with col_nav:
+                # Highlight active session
+                button_type = "primary" if s.id == st.session_state.session_id else "secondary"
+                label = s.title if s.title else "Không tiêu đề"
+                if st.button(f"💬 {label}", key=f"nav_{s.id}", type=button_type, use_container_width=True):
+                    st.session_state.session_id = s.id
+                    st.rerun()
 
-# Chat Input
-rag_chain = get_rag_chain()
+            with col_del:
+                if st.button("✕", key=f"del_{s.id}", help="Xóa hội thoại này", use_container_width=True):
+                    handle_delete_session(repo, s.id)
 
-if prompt := st.chat_input("Nhập câu hỏi của bạn..."):
-    # 1. Display User Message immediately
-    with st.chat_message("user"):
-        st.markdown(prompt)
-    
-    # 2. Save User Message to DB
-    repo.add_message(current_session_id, "user", prompt)
-    
-    # 3. Generate Answer
-    with st.chat_message("assistant"):
-        if not rag_chain:
-            st.error("Hệ thống chưa sẵn sàng.")
-            answer = "Lỗi hệ thống."
-            sources = []
-        else:
-            with st.spinner("Đang tra cứu và phân tích..."):
-                # Format history for Context
-                history_str = format_chat_history(messages) # Use DB messages
-                
-                # Update Session Title if it's the first message
-                if len(messages) == 0:
-                    # Simple heuristic: Use first 6 words of prompt
-                    new_title = " ".join(prompt.split()[:6]) + "..."
-                    repo.update_session_title(current_session_id, new_title)
-                
-                # Call RAG
-                response = rag_chain.generate_answer(prompt, chat_history_str=history_str)
-                answer = response["answer"]
-                
-                # Normalize sources for DB storage (must be JSON serializable)
-                # RAG returns Document objects, we need dicts
-                raw_sources = response.get("source_documents", [])
-                json_sources = []
-                for doc in raw_sources:
-                    json_sources.append({
-                        "source": doc.metadata.get("source", "Unknown"),
-                        "page": doc.metadata.get("page", "N/A"),
-                        "page_content": doc.page_content
-                    })
-                
-                standalone = response.get("standalone_query")
+        st.divider()
+        with st.expander("⚙️ Quản lý Dữ liệu"):
+            st.info(f"Nguồn: `{AppConfig.RAW_DATA_PATH}`")
+            if st.button("🔄 Cập nhật Index"):
+                build_index()
 
-            st.markdown(answer)
-            
-            if standalone and standalone != prompt:
-                with st.expander("🧠 Tư duy ngữ cảnh"):
-                    st.info(f"AI đã hiểu: **{standalone}**")
-            
-            display_sources(json_sources)
-            
-            # 4. Save Assistant Message to DB
-            repo.add_message(current_session_id, "assistant", answer, sources=json_sources)
+            st.divider()
 
-    # 5. Rerun to refresh UI/Sidebar
+            if st.button("🔥 Xóa toàn bộ dữ liệu chat", type="primary", use_container_width=True):
+                handle_delete_all_sessions(repo)
+
+    # Main Chat Area
+    current_session_id = st.session_state.session_id
+    messages = repo.get_messages(current_session_id)
+
+    # Display History
+    for msg in messages:
+        with st.chat_message(msg.role):
+            st.markdown(msg.content)
+            if msg.role == "assistant" and msg.sources:
+                display_sources(msg.sources)
+
+    # Chat Input
+    rag_chain = get_rag_chain()
+
+    if prompt := st.chat_input("Nhập câu hỏi của bạn..."):
+        # 1. Display User Message immediately
+        with st.chat_message("user"):
+            st.markdown(prompt)
+
+        # 2. Save User Message to DB
+        repo.add_message(current_session_id, "user", prompt)
+
+        # 3. Generate Answer
+        with st.chat_message("assistant"):
+            if not rag_chain:
+                st.error("Hệ thống chưa sẵn sàng.")
+                answer = "Lỗi hệ thống."
+                sources = []
+            else:
+                with st.spinner("Đang tra cứu và phân tích..."):
+                    # Format history for Context
+                    history_str = format_chat_history(messages)  # Use DB messages
+
+                    # Update Session Title if it's the first message
+                    if len(messages) == 0:
+                        # Simple heuristic: Use first 6 words of prompt
+                        new_title = " ".join(prompt.split()[:6]) + "..."
+                        repo.update_session_title(current_session_id, new_title)
+
+                    # Call RAG
+                    response = rag_chain.generate_answer(prompt, chat_history_str=history_str)
+                    answer = response["answer"]
+
+                    # Normalize sources for DB storage (must be JSON serializable)
+                    # RAG returns Document objects, we need dicts
+                    raw_sources = response.get("source_documents", [])
+                    json_sources = []
+                    for doc in raw_sources:
+                        json_sources.append({
+                            "source": doc.metadata.get("source", "Unknown"),
+                            "page": doc.metadata.get("page", "N/A"),
+                            "page_content": doc.page_content
+                        })
+
+                    standalone = response.get("standalone_query")
+
+                st.markdown(answer)
+
+                if standalone and standalone != prompt:
+                    with st.expander("🧠 Tư duy ngữ cảnh"):
+                        st.info(f"AI đã hiểu: **{standalone}**")
+
+                display_sources(json_sources)
+
+                # 4. Save Assistant Message to DB
+                repo.add_message(current_session_id, "assistant", answer, sources=json_sources)
+
+        # 5. Rerun to refresh UI/Sidebar
+        st.rerun()
+
+finally:
+    # Ensure DB connection is always closed
     db.close()
-    st.rerun()
-
-# Close DB connection at end of script run
-db.close()

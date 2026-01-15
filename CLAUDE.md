@@ -1,87 +1,127 @@
-# MISSION
-You are the **"Principal Evolutionary Architect & Orchestrator"**.
-Your goal is to guide the system from MVP to Maturity with **Strict Architectural Integrity**, ensuring every line of code serves a scalable, maintainable structure.
+# CLAUDE.md - Core Template v1.0
 
-# 🧠 CORE COGNITIVE RULES (THE BEDROCK)
-
-1.  **ARCHITECTURAL INTEGRITY (THE SUPREME LAW)**: You enforce **Clean Architecture** strictly. Dependencies point inwards. No business logic in Controllers/UI. No "Quick & Dirty" solutions.
-2.  **ZERO ASSUMPTION & CONTEXT FIRST**: Must reading DEV_LOG.md before do anything. Never assume stack versions or logic. Before answering, identify and read "Relevant Files" (Target, Dependency, Config, Knowledge Base).
-3.  **INTERFACE FIRST**: Define the *What* (Contracts/Interfaces/Swagger) before the *How* (Implementation).
-4.  **EVOLUTIONARY SAFETY**: Every modification requiring a schema change MUST include a **Migration Strategy** (Backward Compatibility + SQL/NoSQL Scripts).
-5.  **DOCUMENT OR DIE**: Implementation is not finished until it is tested [PROTOCOL C] and documented [PROTOCOL G].
-
-# 📚 PROTOCOLS LIBRARY
-
-## [PROTOCOL A]: ARCHITECTURAL ANALYSIS & CLARIFICATION
-*Trigger:* New feature request or ambiguous requirement.
-*Action:*
-1.  **Impact Analysis**: Identify "Blast Radius" (Which modules break?).
-2.  **Governance Check**: Does this violate DRY? Is this in the right Layer?
-3.  **Ask**: Request specific context files if missing. Ask clarifying questions on edge cases.
-
-## [PROTOCOL B]: DESIGN & CONTRACT (Level 2)
-*Trigger:* After context is clear, before coding logic.
-*Action:*
-1.  **Diagram**: Use Mermaid to visualize the Flow/Structure.
-2.  **Define Contracts**: Output specific Interfaces (TS/Java/C#), DTOs, and API Specs (OpenAPI).
-3.  **Migration Plan**: If data changes, provide the migration script.
-
-## [PROTOCOL C]: TDD IMPLEMENTATION ("Test First")
-*Trigger:* After Contracts [B] are approved.
-*Action:*
-1.  Read relevant existing tests.
-2.  Write Unit Tests (Happy/Edge/Error) based on Contracts [B].
-3.  Wait for approval.
-4.  Write Implementation to pass tests.
-
-## [PROTOCOL D]: SCIENTIFIC DEBUGGING
-*Trigger:* Bug fixing.
-*Action:*
-"1. Reproduce (Test/Log). 2. Analyze (Root Cause). 3. Fix (Architecturally Sound). 4. Verify. 5. Repeat."
-
-## [PROTOCOL G]: DEV LOG & VISUALIZATION ("The Living Doc")
-*Trigger:* IMMEDIATELY after writing/fixing code.
-*Action:*
-"You MUST append a new entry to 'DEV_LOG.md'.
-Content format:
-## [YYYY-MM-DD] Task: [Task Name]
-### 1. Architectural Decision (ADR)
-- **Context**: Why we did this.
-- **Decision**: The pattern/structure used.
-- **Impact**: Changes to Schema/API.
-### 2. Flow Visualization (Mermaid)
-- `sequenceDiagram` or `classDiagram` showing the modified flow.
-"
-
-# 🚀 INTERACTION WORKFLOW
-
-Upon receiving a user prompt:
-
-1.  **Analyze Intent**:
-    * *Design/New Feature?* -> **[A]** -> **[B]**.
-    * *Coding/Implementation?* -> **[C]** -> **[G]**.
-    * *Bug?* -> **[D]** -> **[G]**.
-2.  **Identify Context**: List "Relevant Files" you need to read.
-3.  **Formulate Response**:
-
-**FORMAT YOUR RESPONSE AS FOLLOWS:**
+## How This File Works
+This file provides context to Claude Code. It is automatically injected into every conversation.
+- **Top sections**: Static principles (rarely change)
+- **Bottom sections**: Project-specific context (Claude updates as it learns)
 
 ---
-**📂 Context Loading:**
-I need to read/analyze: [List files...] or [None - Context Loaded]
 
-**🛡️ Governance Check:**
-* **Architecture Compliance**: [Pass/Fail - Explanation]
-* **Impact Analysis**: [List affected components]
+## General Principles
 
-**⚙️ Proposed Workflow:**
-I recommend chaining: **[PROTOCOL X]** -> **[PROTOCOL Y]**
+### Code Quality
+- Read existing code before making changes
+- Follow existing patterns in the codebase
+- Keep changes minimal and focused
+- No over-engineering or premature abstractions
 
-**Plan of Action:**
-1. [Step 1 Details...]
-2. ...
-3. **Documentation**: Update `DEV_LOG.md`.
+### Communication
+- Ask clarifying questions when requirements are ambiguous
+- Explain trade-offs when multiple approaches exist
+- Be direct about limitations or concerns
 
-*Shall I proceed with this plan?*
+### Documentation
+- Update DEV_LOG.md after significant changes
+- Update "Recent Context" section below after updating DEV_LOG
+- Keep commit messages descriptive
+- Document "why" not just "what"
+
+### When to Read DEV_LOG.md
+Read the full DEV_LOG.md when:
+- Fixing bugs (check if related issues were solved before)
+- Modifying existing features (understand past decisions)
+- User asks about project history
+- Context in "Recent Context" section is not enough
+
+Skip reading DEV_LOG.md when:
+- Answering general questions
+- Creating new independent features
+- Task has no relation to past work
+
 ---
 
+## Workflows
+
+### Bug Fix
+1. Reproduce → 2. Find root cause → 3. Fix minimally → 4. Verify → 5. Document
+
+### New Feature
+1. Clarify requirements → 2. Check impact on existing code → 3. Implement → 4. Test → 5. Document
+
+### Refactor
+1. Ensure tests exist → 2. Small incremental changes → 3. Verify no regression → 4. Document
+
+---
+
+## DEV_LOG Format
+```markdown
+## [YYYY-MM-DD] Task: [Brief Description]
+### Context
+Why this change was needed
+
+### Decision
+What approach was taken and why
+
+### Impact
+What files/systems were affected
+```
+
+---
+
+## Recent Context
+<!--
+Claude: Keep this section updated with the last 3 significant changes.
+Format: [Date] Brief description - key insight
+This provides quick context without reading the full DEV_LOG.
+-->
+
+1. [2026-01-15] Code Health Audit & Bug Fixes - Fixed DB session leak in app.py using try/finally, added config validation on startup, removed unused Ollama provider code
+2. [2026-01-14] FAISS IVF Clustering - Implemented configurable approximate search (IVF/IVFPQ) for scalability
+3. [2026-01-14] Separate Rewriter LLM Config - Each LLM component (Generator, Router, Rewriter) can use different provider/model
+
+---
+
+## Project Context
+<!--
+Claude: Update this section as you learn about the project.
+User can also edit this section directly.
+-->
+
+**Status**: Production-ready MVP (v1.0)
+
+**Tech Stack**:
+- Frontend: Streamlit
+- LLM: Google Gemini / Groq (Kimi K2)
+- Embedding: bkai-foundation-models/vietnamese-bi-encoder (768D)
+- Vector DB: FAISS (Flat/IVF/IVFPQ configurable)
+- SQL DB: SQLite + SQLAlchemy ORM
+- Framework: LangChain 0.2+
+
+**Key Directories**:
+- `app.py` - Main Streamlit entry point
+- `src/config.py` - Centralized configuration
+- `src/rag_engine/` - RAG core (generator, retriever, router, prompts, llm_factory)
+- `src/ingestion/` - ETL pipeline (loader, splitter, indexer, metadata)
+- `src/database/` - Persistence layer (models, repository, engine)
+- `data/raw/` - Source PDF/DOCX legal documents
+- `data/vector_store/` - FAISS index + metadata
+- `data/chat_history.db` - SQLite chat persistence
+
+**Architecture Notes**:
+- Modular Monolith with clear separation of concerns
+- Stateless RAGChain (singleton cached via @st.cache_resource)
+- Intent Routing: LEGAL queries → RAG pipeline, GENERAL → casual chat
+- Query Rewriting for context-aware follow-up questions
+- Incremental indexing (only processes changed files)
+- Multi-LLM support via Factory pattern (separate configs for Generator, Router, Rewriter)
+
+**Conventions**:
+- Vietnamese UI and prompts
+- IRAC structure for legal responses (Issue, Rule, Analysis, Conclusion)
+- 0-based page index from PyPDF → +1 for display
+- Chunk size: 1000, overlap: 200
+
+**Known Issues / Gotchas**:
+- IVF index needs sufficient vectors for training (min = nlist, recommend 39*nlist)
+- Cold start ~7-17s due to embedding model loading (mitigated by caching)
+- Deprecated `datetime.utcnow()` used (works but should migrate to timezone-aware)

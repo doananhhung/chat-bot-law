@@ -1,15 +1,13 @@
 from typing import Any
 from langchain_core.language_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
-# from langchain_community.chat_models import ChatOllama # Uncomment when needed
-# from langchain_openai import ChatOpenAI # Uncomment when needed
 from src.config import AppConfig
 from src.utils.logger import logger
 
 class LLMFactory:
     """
     Factory to create LLM instances based on provider configuration.
-    Supports: Google (Gemini), Ollama (Local), OpenAI, etc.
+    Supports: Google (Gemini), Groq.
     """
     
     @staticmethod
@@ -39,17 +37,15 @@ class LLMFactory:
                     from pydantic import SecretStr
                 except ImportError:
                     raise ImportError("Please install langchain-groq to use Groq: pip install langchain-groq")
-                
+
                 return ChatGroq(
                     model=model_name,
                     api_key=SecretStr(AppConfig.GROQ_API_KEY) if AppConfig.GROQ_API_KEY else None,
                     **kwargs
                 )
-                
-            # Add more providers here (OpenAI, Anthropic...)
-            
+
             else:
-                raise ValueError(f"Unsupported LLM Provider: {provider}")
+                raise ValueError(f"Unsupported LLM Provider: {provider}. Supported: 'google', 'groq'")
                 
         except Exception as e:
             logger.error(f"Failed to initialize LLM ({provider}/{model_name}): {e}")

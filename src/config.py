@@ -71,15 +71,24 @@ class AppConfig:
     # Default to use the same provider/model as main if not specified
     REWRITER_PROVIDER = os.getenv("REWRITER_PROVIDER", LLM_PROVIDER)
     REWRITER_MODEL_NAME = os.getenv("REWRITER_MODEL_NAME", LLM_MODEL_NAME)
-    
-    # Ollama Specific (for self-hosting)
-    OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 
     @classmethod
     def validate(cls):
-        """Validate critical configuration."""
-        if cls.LLM_PROVIDER == "google" and not cls.GOOGLE_API_KEY:
-            raise ValueError("GOOGLE_API_KEY is missing but provider is set to 'google'. Check your .env file.")
-        
-        if cls.LLM_PROVIDER == "groq" and not cls.GROQ_API_KEY:
-            raise ValueError("GROQ_API_KEY is missing but provider is set to 'groq'. Check your .env file.")
+        """Validate critical configuration for all LLM providers."""
+        providers_to_check = [
+            ("Main Generator", cls.LLM_PROVIDER),
+            ("Router", cls.ROUTER_PROVIDER),
+            ("Rewriter", cls.REWRITER_PROVIDER),
+        ]
+
+        for name, provider in providers_to_check:
+            if provider == "google" and not cls.GOOGLE_API_KEY:
+                raise ValueError(
+                    f"GOOGLE_API_KEY is missing but {name} provider is set to 'google'. "
+                    "Check your .env file."
+                )
+            if provider == "groq" and not cls.GROQ_API_KEY:
+                raise ValueError(
+                    f"GROQ_API_KEY is missing but {name} provider is set to 'groq'. "
+                    "Check your .env file."
+                )

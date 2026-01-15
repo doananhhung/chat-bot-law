@@ -587,3 +587,70 @@ IVF_NPROBE=8   # Clusters to search (higher = more accurate)
 ### 5. Utility Scripts
 - `rebuild_ivf_index.py` - Rebuild index with IVF clustering
 - `run_full_benchmark.py` - Run full comparison benchmark
+
+## [2026-01-15] Task: Code Health Audit & Critical Bug Fixes
+### 1. Architectural Decision (ADR)
+- **Context**: Comprehensive code review revealed several issues:
+    1. **Database Session Leak**: `app.py` opened DB sessions without guaranteed cleanup, causing potential memory leaks on Streamlit reruns.
+    2. **Config Validation Not Called**: `AppConfig.validate()` existed but was never invoked, allowing apps to start with missing API keys.
+    3. **Dead Code**: Ollama provider was commented out but referenced in docs and error messages.
+
+- **Decision**: Implemented **Defensive Programming** patterns.
+    - **DB Session Management**: Wrapped entire main UI logic in `try/finally` block to guarantee `db.close()` execution.
+    - **Startup Validation**: Added `AppConfig.validate()` call immediately after `init_db()` with fail-fast behavior.
+    - **Code Cleanup**: Removed all Ollama-related code and comments since it's not used.
+
+- **Changes**:
+    | File | Change |
+    |------|--------|
+    | `app.py:19-25` | Added `AppConfig.validate()` after `init_db()`, raise on failure |
+    | `app.py:134-248` | Wrapped main logic in `try/finally`, single `db.close()` in finally |
+    | `src/config.py:75-94` | Extended `validate()` to check all 3 providers (Generator, Router, Rewriter) |
+    | `src/config.py` | Removed `OLLAMA_BASE_URL` config |
+    | `src/rag_engine/llm_factory.py` | Removed Ollama imports/comments, clearer error message |
+
+- **Impact**:
+    - **Stability**: No more DB connection leaks on page refresh/rerun.
+    - **Fail-Fast**: App crashes immediately with clear error if API keys missing.
+    - **Maintainability**: Cleaner codebase with only supported providers (Google, Groq).
+
+### 2. Flow Visualization (Mermaid)
+```mermaid
+%%{init: {'theme': 'default', 'themeVariables': { 'background': '#ffffff' }}}%%
+flowchart TD
+    subgraph Startup["App Startup (app.py)"]
+        InitDB[init_db] --> Validate[AppConfig.validate]
+        Validate -->|Missing Key| Crash[Raise Error - Fail Fast]
+        Validate -->|OK| Continue[Continue Loading]
+    end
+
+    subgraph MainLoop["Main UI Loop"]
+        GetDB[db = get_db_session] --> TryBlock[try:]
+        TryBlock --> UILogic[Sidebar + Chat Logic]
+        UILogic --> Rerun{st.rerun?}
+        Rerun -->|Yes| FinallyBlock
+        Rerun -->|No| FinallyBlock
+        FinallyBlock[finally: db.close] --> End[Guaranteed Cleanup]
+    end
+
+    Startup --> MainLoop
+```
+
+### 3. Validation Coverage
+```python
+# Before: Only checked main LLM provider
+if cls.LLM_PROVIDER == "google" and not cls.GOOGLE_API_KEY:
+    raise ValueError(...)
+
+# After: Checks all 3 LLM components
+providers_to_check = [
+    ("Main Generator", cls.LLM_PROVIDER),
+    ("Router", cls.ROUTER_PROVIDER),
+    ("Rewriter", cls.REWRITER_PROVIDER),
+]
+for name, provider in providers_to_check:
+    if provider == "google" and not cls.GOOGLE_API_KEY:
+        raise ValueError(f"GOOGLE_API_KEY missing for {name}")
+    if provider == "groq" and not cls.GROQ_API_KEY:
+        raise ValueError(f"GROQ_API_KEY missing for {name}")
+```
