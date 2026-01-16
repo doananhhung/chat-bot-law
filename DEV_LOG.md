@@ -654,3 +654,52 @@ for name, provider in providers_to_check:
     if provider == "groq" and not cls.GROQ_API_KEY:
         raise ValueError(f"GROQ_API_KEY missing for {name}")
 ```
+
+## [2026-01-16] Task: Retrieval Mode Selector (IVF Search Configuration)
+### 1. Technical Explanation
+- **Context**: Users need to balance between search accuracy and speed when using IVF indexes. Different use cases benefit from different nprobe values.
+- **Decision**: Added a UI control in Streamlit sidebar to let users select search mode at runtime.
+
+- **Changes**:
+    | File | Change |
+    |------|--------|
+    | `src/rag_engine/retriever.py:101-172` | Added `set_search_mode()` and `get_current_search_mode()` methods |
+    | `app.py:129-130` | Added session state initialization for `search_mode` |
+    | `app.py:179-209` | Added "⚡ Chế độ tìm kiếm" expander with radio buttons |
+    | `app.py:250-253` | Apply search mode before each RAG query |
+
+- **Search Modes**:
+    | Mode | nprobe | Recall Est. | Use Case |
+    |------|--------|-------------|----------|
+    | **quality** | nlist (64) | ~100% | Need exact results |
+    | **balanced** | 8 | ~96% | Daily use (default) |
+    | **speed** | 2 | ~80-85% | Quick queries |
+
+- **Impact**:
+    - **UX**: Users can tune search behavior without restarting app
+    - **Flat Index**: UI gracefully disables when not using IVF
+    - **Runtime**: nprobe changes take effect immediately for next query
+
+### 2. Flow Visualization (Mermaid)
+```mermaid
+%%{init: {'theme': 'default', 'themeVariables': { 'background': '#ffffff' }}}%%
+flowchart TD
+    subgraph Sidebar["Sidebar UI"]
+        Radio[Radio: quality/balanced/speed]
+        Radio --> SessionState[st.session_state.search_mode]
+    end
+
+    subgraph Query["Query Processing"]
+        UserInput[User sends question]
+        UserInput --> ApplyMode[retriever.set_search_mode]
+        ApplyMode --> SetNprobe[ivf_index.nprobe = X]
+        SetNprobe --> RAG[RAG Pipeline]
+    end
+
+    SessionState --> ApplyMode
+
+    subgraph Retriever["SemanticRetriever"]
+        SetSearchMode["set_search_mode(mode)"]
+        GetSearchMode["get_current_search_mode()"]
+    end
+```

@@ -98,6 +98,79 @@ class SemanticRetriever:
 
         return info
 
+    def set_search_mode(self, mode: str) -> bool:
+        """
+        Set search mode for IVF index.
+
+        Args:
+            mode: "quality" | "balanced" | "speed"
+
+        Returns:
+            True if set successfully, False if not an IVF index
+        """
+        if not self.vector_store:
+            return False
+
+        index = self.vector_store.index
+        ivf_index = self._get_ivf_index(index)
+
+        if not ivf_index:
+            return False
+
+        # Map mode to nprobe value
+        mode_config = {
+            "quality": ivf_index.nlist,  # Search all clusters
+            "balanced": 8,               # ~12.5% of 64 clusters
+            "speed": 2,                  # ~3% of clusters
+        }
+
+        nprobe = mode_config.get(mode, 8)  # Default to balanced
+        ivf_index.nprobe = nprobe
+        logger.info(f"Search mode set to '{mode}': nprobe={nprobe}")
+        return True
+
+    def get_current_search_mode(self) -> dict:
+        """
+        Get current search mode information.
+
+        Returns:
+            {
+                "mode": "quality" | "balanced" | "speed",
+                "nprobe": int,
+                "nlist": int,
+                "is_ivf": bool,
+                "search_scope_pct": float  # % clusters being searched
+            }
+        """
+        if not self.vector_store:
+            return {"is_ivf": False, "mode": None}
+
+        index = self.vector_store.index
+        ivf_index = self._get_ivf_index(index)
+
+        if not ivf_index:
+            return {"is_ivf": False, "mode": None}
+
+        nprobe = ivf_index.nprobe
+        nlist = ivf_index.nlist
+        search_scope_pct = round((nprobe / nlist) * 100, 1)
+
+        # Determine current mode based on nprobe
+        if nprobe >= nlist:
+            mode = "quality"
+        elif nprobe <= 2:
+            mode = "speed"
+        else:
+            mode = "balanced"
+
+        return {
+            "mode": mode,
+            "nprobe": nprobe,
+            "nlist": nlist,
+            "is_ivf": True,
+            "search_scope_pct": search_scope_pct
+        }
+
     def get_relevant_docs(self, query: str, k: int = 10) -> List[Document]:
         """
         Retrieve top k relevant documents for the query.

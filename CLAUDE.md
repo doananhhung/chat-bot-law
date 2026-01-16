@@ -75,9 +75,9 @@ Format: [Date] Brief description - key insight
 This provides quick context without reading the full DEV_LOG.
 -->
 
-1. [2026-01-15] Code Health Audit & Bug Fixes - Fixed DB session leak in app.py using try/finally, added config validation on startup, removed unused Ollama provider code
-2. [2026-01-14] FAISS IVF Clustering - Implemented configurable approximate search (IVF/IVFPQ) for scalability
-3. [2026-01-14] Separate Rewriter LLM Config - Each LLM component (Generator, Router, Rewriter) can use different provider/model
+1. [2026-01-16] Retrieval Mode Selector - Added UI to choose search mode (quality/balanced/speed) for IVF index nprobe tuning
+2. [2026-01-15] Code Health Audit & Bug Fixes - Fixed DB session leak in app.py using try/finally, added config validation on startup, removed unused Ollama provider code
+3. [2026-01-14] FAISS IVF Clustering - Implemented configurable approximate search (IVF/IVFPQ) for scalability
 
 ---
 

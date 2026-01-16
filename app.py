@@ -126,6 +126,9 @@ if "session_id" not in st.session_state:
     st.session_state.session_id = new_session.id
     db.close()
 
+if "search_mode" not in st.session_state:
+    st.session_state.search_mode = "balanced"
+
 # --- Main UI ---
 st.title("🤖 Trợ lý AI Tra cứu Pháp Luật")
 
@@ -173,6 +176,38 @@ try:
             if st.button("🔥 Xóa toàn bộ dữ liệu chat", type="primary", use_container_width=True):
                 handle_delete_all_sessions(repo)
 
+        # Search Mode Selector
+        retriever = get_retriever()
+        if retriever:
+            mode_info = retriever.get_current_search_mode()
+            if mode_info.get("is_ivf"):
+                with st.expander("⚡ Chế độ tìm kiếm"):
+                    search_mode = st.radio(
+                        "Chọn chế độ:",
+                        options=["balanced", "quality", "speed"],
+                        format_func=lambda x: {
+                            "quality": "🎯 Chính xác cao",
+                            "balanced": "⚖️ Cân bằng (Khuyến nghị)",
+                            "speed": "🚀 Tốc độ cao"
+                        }[x],
+                        index=["balanced", "quality", "speed"].index(st.session_state.search_mode),
+                        key="search_mode_radio",
+                        help="Điều chỉnh cân bằng giữa tốc độ và độ chính xác"
+                    )
+
+                    # Update session state if changed
+                    if search_mode != st.session_state.search_mode:
+                        st.session_state.search_mode = search_mode
+                        retriever.set_search_mode(search_mode)
+                        st.rerun()
+
+                    # Display current mode info
+                    current_info = retriever.get_current_search_mode()
+                    st.caption(f"📊 Phạm vi: {current_info['search_scope_pct']}% clusters ({current_info['nprobe']}/{current_info['nlist']})")
+            else:
+                with st.expander("⚡ Chế độ tìm kiếm"):
+                    st.info("Index hiện tại là Flat (tìm kiếm chính xác), không cần điều chỉnh.")
+
     # Main Chat Area
     current_session_id = st.session_state.session_id
     messages = repo.get_messages(current_session_id)
@@ -181,8 +216,12 @@ try:
     for msg in messages:
         with st.chat_message(msg.role):
             st.markdown(msg.content)
-            if msg.role == "assistant" and msg.sources:
-                display_sources(msg.sources)
+            if msg.role == "assistant":
+                if msg.standalone_query:
+                    with st.expander("🧠 Tư duy ngữ cảnh"):
+                        st.info(f"AI đã hiểu: **{msg.standalone_query}**")
+                if msg.sources:
+                    display_sources(msg.sources)
 
     # Chat Input
     rag_chain = get_rag_chain()
@@ -212,6 +251,11 @@ try:
                         new_title = " ".join(prompt.split()[:6]) + "..."
                         repo.update_session_title(current_session_id, new_title)
 
+                    # Apply search mode before querying
+                    retriever = get_retriever()
+                    if retriever:
+                        retriever.set_search_mode(st.session_state.search_mode)
+
                     # Call RAG
                     response = rag_chain.generate_answer(prompt, chat_history_str=history_str)
                     answer = response["answer"]
@@ -238,7 +282,9 @@ try:
                 display_sources(json_sources)
 
                 # 4. Save Assistant Message to DB
-                repo.add_message(current_session_id, "assistant", answer, sources=json_sources)
+                standalone_to_save = standalone if (standalone and standalone != prompt) else None
+                repo.add_message(current_session_id, "assistant", answer,
+                                 sources=json_sources, standalone_query=standalone_to_save)
 
         # 5. Rerun to refresh UI/Sidebar
         st.rerun()

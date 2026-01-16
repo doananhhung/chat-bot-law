@@ -48,15 +48,17 @@ class ChatRepository:
         self.db.commit()
         return num_deleted
 
-    def add_message(self, session_id: str, role: str, content: str, sources: List[Dict] = None) -> ChatMessage:
+    def add_message(self, session_id: str, role: str, content: str,
+                    sources: List[Dict] = None, standalone_query: str = None) -> ChatMessage:
         if sources is None:
             sources = []
-        
+
         msg = ChatMessage(
             session_id=session_id,
             role=role,
             content=content,
-            sources=sources
+            sources=sources,
+            standalone_query=standalone_query
         )
         self.db.add(msg)
         
