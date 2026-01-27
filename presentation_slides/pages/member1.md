@@ -34,14 +34,9 @@
 
 <template #left>
 
-### LLM thông thường
 
 ```
-Câu hỏi 
-    ↓
-   LLM 
-    ↓
-Trả lời
+Câu hỏi → LLM → Trả lời
 ```
 
 - Kiến thức giới hạn
@@ -52,19 +47,15 @@ Trả lời
 
 <template #right>
 
-### Retrieval-Augmented Generation
 
 ```
-Câu hỏi 
-    ↓
-Tìm kiếm (FAISS) 
-    ↓
-Context + Câu hỏi 
-    ↓
-   LLM 
-    ↓
-Trả lời + Trích dẫn ✅
+Câu hỏi → Tìm kiếm (FAISS) → Context
+→ LLM → Trả lời + Trích dẫn
 ```
+
+- Nguồn verify được
+- Luôn cập nhật
+- Không hallucination
 
 </template>
 
@@ -99,25 +90,25 @@ Trả lời + Trích dẫn ✅
 <LayoutDiagram title="System Architecture">
 
 ```mermaid
-flowchart TB
+flowchart LR
     subgraph Presentation["PRESENTATION LAYER"]
-        UI["🖥️ Streamlit UI<br/>(app.py)"]
+        UI[" Streamlit UI<br/>(app.py)"]
     end
     
     subgraph Business["BUSINESS LOGIC LAYER"]
-        RAG["🤖 RAG Engine<br/>Generator | Retriever | Router"]
-        ING["📄 Ingestion<br/>Loader | Splitter | Indexer"]
-        DB["💾 Database<br/>Models | Repository"]
+        RAG[" RAG Engine<br/>Generator | Retriever | Router"]
+        ING[" Ingestion<br/>Loader | Splitter | Indexer"]
+        DB[" Database<br/>Models | Repository"]
     end
     
     subgraph Data["DATA ACCESS LAYER"]
-        FAISS["🔍 FAISS<br/>Vector DB"]
-        SQLite["📊 SQLite<br/>Chat History"]
+        FAISS[" FAISS<br/>Vector DB"]
+        SQLite[" SQLite<br/>Chat History"]
     end
     
     subgraph External["EXTERNAL SERVICES"]
-        Groq["☁️ Groq API<br/>LLM - Kimi K2"]
-        HF["🤗 HuggingFace<br/>vietnamese-bi-encoder"]
+        Groq[" Groq API<br/>LLM - Kimi K2"]
+        HF[" HuggingFace<br/>vietnamese-bi-encoder"]
     end
     
     UI --> RAG
@@ -169,7 +160,6 @@ sequenceDiagram
 
 <template #left>
 
-### Components
 
 | Component | Chức năng |
 |-----------|-----------|
@@ -202,7 +192,7 @@ src/rag_engine/
 
 <LayoutTitleContent title="Tech Stack">
 
-| Layer | Công nghệ | Mục đích |
+| LAYER | CÔNG NGHỆ | MỤC ĐÍCH |
 |-------|-----------|----------|
 | **Frontend** | Streamlit | Web UI với Python thuần |
 | **AI Framework** | LangChain | Orchestration cho LLM và RAG |
@@ -218,7 +208,7 @@ src/rag_engine/
 
 <LayoutTitleContent title="Introduction Summary">
 
-| Chủ đề | Điểm chính |
+| CHỦ ĐỀ | ĐIỂM CHÍNH |
 |--------|------------|
 | **Vấn đề** | Tra cứu luật thủ công, thiếu ngữ cảnh, không có nguồn |
 | **Giải pháp** | RAG = Retrieval + Generation |
@@ -226,7 +216,6 @@ src/rag_engine/
 | **Luồng xử lý** | Router → Retrieval → Generation → Citation |
 | **Tech Stack** | Streamlit, LangChain, FAISS, Groq |
 
-### Chuyển tiếp
 **Tiếp theo:** Member 2 - Data Ingestion & Vector Database
 
 *"Làm sao chuyển PDF thành searchable data?"*

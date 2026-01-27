@@ -157,18 +157,18 @@ Câu hỏi: {question}
 
 ```mermaid
 flowchart LR
+    subgraph Solution["GIẢI PHÁP"]
+        E["Original: 'Còn nam thì sao?'"]
+        F["🧠 Query Rewriting"]
+        G["Rewritten: 'Lao động nam có được nghỉ thai sản không?'"]
+        H["✅ Câu hỏi rõ ràng!"]
+    end
+    
     subgraph Problem["VẤN ĐỀ"]
         A["User: 'Thai sản nghỉ mấy tháng?'"]
         B["AI: 'Lao động nữ được nghỉ 6 tháng...'"]
         C["User: 'Còn nam thì sao?'"]
         D["❌ Câu hỏi thiếu context!"]
-    end
-    
-    subgraph Solution["GIẢI PHÁP"]
-        E["Original: 'Còn nam thì sao?'"]
-        F["🧠 Query Rewriting"]
-        G["Rewritten: 'Lao động nam có được nghỉ thai sản không?'"]
-        H["✅ Now searchable!"]
     end
     
     A --> B --> C --> D
@@ -337,7 +337,6 @@ LLM_MODEL_NAME=gemini-2.5-flash-lite
 | **Prompt Engineering** | IRAC structure, Chain-of-Thought, anti-hallucination |
 | **LLM Factory** | Multi-provider, easy switching |
 
-### Chuyển tiếp
 **Tiếp theo:** Member 4 - Frontend, Database & Demo
 
 *"Trải nghiệm người dùng như thế nào?"*

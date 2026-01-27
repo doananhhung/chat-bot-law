@@ -142,8 +142,9 @@ Thấy lại lịch sử ✅
 <LayoutDiagram title="Database Schema">
 
 ```mermaid
+%%{init: {'theme':'neutral'}}%%
 erDiagram
-    ChatSession ||--o{ ChatMessage : "1:N"
+    ChatSession ||--o{ ChatMessage : "has"
     
     ChatSession {
         string id PK
@@ -164,6 +165,16 @@ erDiagram
 ```
 
 </LayoutDiagram>
+
+<!--
+"Schema rất đơn giản với 2 bảng:
+
+ChatSession: Đại diện cho một cuộc hội thoại. Có ID, tiêu đề (tự động từ tin nhắn đầu), và timestamps.
+
+ChatMessage: Mỗi tin nhắn trong session. Có role (user hoặc assistant), nội dung, và quan trọng là sources - lưu nguồn trích dẫn dưới dạng JSON.
+
+Relationship là 1:N - một session có nhiều messages."
+-->
 
 ---
 
@@ -193,6 +204,16 @@ class ChatRepository:
 
 </LayoutTitleContent>
 
+<!--
+"Chúng tôi dùng Repository Pattern - một layer abstraction trên database.
+
+ChatRepository cung cấp các methods như create_session, get_messages, add_message.
+
+UI layer chỉ cần gọi repo.add_message(...), không cần biết SQL như thế nào bên dưới.
+
+Pattern này giúp code clean hơn và dễ test hơn."
+-->
+
 ---
 
 <LayoutTitleContent title="Cold Start Problem">
@@ -215,6 +236,16 @@ Mỗi lần reload page: 18.5s delay!
 | **Subsequent loads** | <1s ✅ |
 
 </LayoutTitleContent>
+
+<!--
+"Một vấn đề lớn với AI apps là cold start.
+
+Embedding model nặng 1.5GB. Load lần đầu mất 17 giây. Nếu mỗi lần reload page đều phải load lại, user experience sẽ rất tệ.
+
+Giải pháp là caching. Streamlit có decorator @st.cache_resource - load model một lần, cache trong memory.
+
+Kết quả: Lần đầu vẫn 17 giây, nhưng reload sau đó chỉ dưới 1 giây."
+-->
 
 ---
 
@@ -255,6 +286,16 @@ def get_rag_chain():
 
 </LayoutTwoCol>
 
+<!--
+"Đây là code caching:
+
+get_retriever() load embedding model và FAISS index. Được cache, chỉ chạy một lần.
+
+get_rag_chain() tạo RAG chain với LLM connections. Cũng được cache.
+
+Kết quả: First load ~17s, subsequent loads <1s. Trải nghiệm user smooth hơn nhiều."
+-->
+
 ---
 
 <LayoutComparison title="Stateless Design" leftTitle="❌ Stateful (Cannot cache)" rightTitle="✅ Stateless (Can cache)">
@@ -292,6 +333,16 @@ class RAGChain:
 </template>
 
 </LayoutComparison>
+
+<!--
+"Để caching hoạt động, RAGChain phải là stateless.
+
+Nếu RAGChain lưu history bên trong, mỗi user cần một instance riêng, không thể share.
+
+Thiết kế của chúng tôi: RAGChain không lưu state. History được pass vào từ bên ngoài mỗi lần gọi.
+
+Nhờ vậy, một RAGChain instance có thể phục vụ tất cả users."
+-->
 
 ---
 
