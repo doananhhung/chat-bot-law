@@ -61,9 +61,8 @@ venv.bak/
 .vscode/
 
 # Project Specific
-data/vector_store/
+data/
 .streamlit/
-data/raw
 
 # OS generated files
 .DS_Store

@@ -1,0 +1,19 @@
+{
+  "name": "live-chat-presentation",
+  "private": true,
+  "scripts": {
+    "dev": "slidev --open",
+    "build": "slidev build",
+    "export": "slidev export"
+  },
+  "dependencies": {
+    "@mermaid-js/layout-elk": "^0.1.9",
+    "@slidev/cli": "^52.11.3",
+    "@slidev/theme-default": "^0.25.0",
+    "dayjs": "^1.11.19",
+    "vue": "^3.4.0"
+  },
+  "devDependencies": {
+    "playwright-chromium": "^1.58.0"
+  }
+}

@@ -703,3 +703,14 @@ flowchart TD
         GetSearchMode["get_current_search_mode()"]
     end
 ```
+
+## [2026-01-27] Task: Add Presentation Slides & Git Configuration
+### 1. Technical Explanation
+- **Context**: The project now requires a presentation component (`presentation_slides`) built with Slidev.
+- **Changes**:
+    - **New Component**: Added `presentation_slides/` directory containing Slidev source files.
+    - **Configuration**: Updated `.gitignore` to ignore the entire `data/` directory (including `chat_history.db`) to prevent committing local session data.
+    - **Tooling**: Updated `.claude/settings.local.json` to allow necessary git commands.
+- **Impact**:
+    - **Repository Hygiene**: Local databases are no longer tracked.
+    - **Features**: Presentation materials are now version controlled.

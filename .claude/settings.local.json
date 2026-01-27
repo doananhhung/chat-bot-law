@@ -2,7 +2,23 @@
   "permissions": {
     "allow": [
       "Bash(powershell -Command:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(pip show:*)",
+      "Bash(python -c:*)",
+      "Bash(dir:*)",
+      "Bash(python -m tests.benchmark_comparison:*)",
+      "Bash(set:*)",
+      "Bash(findstr:*)",
+      "Bash(python D:/heheboi/Project/chat-bot-law/rebuild_ivf_index.py)",
+      "Bash(cd:*)",
+      "Bash(sqlite3:*)",
+      "Bash(git -C \"D:\\\\heheboi\\\\Project\\\\chat-bot-law\" status:*)",
+      "Bash(git -C \"D:\\\\heheboi\\\\Project\\\\chat-bot-law\" diff:*)",
+      "Bash(git -C \"D:\\\\heheboi\\\\Project\\\\chat-bot-law\" log:*)",
+      "Bash(git -C \"D:\\\\heheboi\\\\Project\\\\chat-bot-law\" diff HEAD -- src/database/models.py:*)",
+      "Bash(git -C \"D:\\\\heheboi\\\\Project\\\\chat-bot-law\" show:*)"
     ]
   }
 }
