@@ -653,35 +653,6 @@ embedding = [0.123, -0.456, 0.789, 0.234, ..., 0.891]  # 768 chiều
 
 ---
 
-<LayoutTitleContent title="Data Structure: Chunk ID Mapping">
-
-### Định dạng ID xác định
-
-```python
-# Ví dụ chunk trong FAISS
-chunk_id = "a1b2c3d4_0"
-         = [file_hash]_[chunk_index]
-```
-
-### Ánh xạ tới Document
-
-```python
-Document(
-    page_content="Điều 139. Nghỉ thai sản...",
-    metadata={
-        "source": "luat_lao_dong.pdf",
-        "page": 45,
-        "chunk_id": "a1b2c3d4_0"
-    }
-)
-```
-
-**Cho phép:** Xoá chính xác theo chunk ID khi cập nhật
-
-</LayoutTitleContent>
-
----
-
 <LayoutTitleContent title="Data Ingestion Summary">
 
 | Chủ đề | Điểm chính |
