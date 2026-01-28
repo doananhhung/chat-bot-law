@@ -11,6 +11,56 @@
     }
 </style>
 
+## [2026-01-28] Task: Fix Presentation Carousel Syntax Error
+### 1. Architectural Decision (ADR)
+- **Context**: While enhancing the Incremental Sync slides in `presentation_slides/pages/member2.md`, attempted to use `````carousel````` syntax (Antigravity-specific markdown feature) within Slidev presentation framework.
+- **Issue**: Slidev does not recognize carousel syntax, causing 2 slides (Data Structure Deep Dive, Sync Example) to fail rendering. Content appeared as raw markdown with broken layouts.
+- **Root Cause**: **Confusion between presentation frameworks**:
+    - **Antigravity Artifacts**: Support carousel syntax for multi-panel documentation
+    - **Slidev Framework**: Uses slide separators (`---`) only, no carousel support
+- **Decision**: Convert carousel-based slides into individual Slidev slides.
+    - **Slide 1 (Data Structure)**: 1 carousel with 4 panels → 4 individual slides
+    - **Slide 2 (Sync Example)**: 1 carousel with 6 panels → 6 individual slides
+    - **Total change**: 2 slides → 10 slides
+- **Impact**:
+    - **Fixed**: All slides now render correctly in Slidev
+    - **Trade-off**: Increased slide count but improved presentation clarity
+    - **Documentation**: Added this DEV_LOG entry to prevent future confusion
+
+### 2. Lessons Learned
+**CRITICAL RULE for Slidev Presentations:**
+```markdown
+❌ WRONG (Antigravity-only):
+````carousel
+### Panel 1
+<!-- slide -->
+### Panel 2
+````
+
+✅ CORRECT (Slidev):
+---
+<Layout title="Panel 1">
+Content here
+</Layout>
+
+---
+<Layout title="Panel 2">
+Content here
+</Layout>
+```
+
+### 3. Files Modified
+- **presentation_slides/pages/member2.md**: 
+    - Lines 555-634: Replaced carousel → 4 slides (Folder, Metadata, FAISS Files, Chunk Mapping)
+    - Lines 676-768: Replaced carousel → 6 slides (Scenario, Hash Comparison, DELETE, UPDATE, ADD, Final State)
+- **DEV_LOG.md**: Added this entry
+
+### 4. Prevention Checklist
+Before using syntax in Slidev presentations:
+- [ ] Is this syntax part of Slidev framework? (Check [sli.dev/guide](https://sli.dev/guide/syntax))
+- [ ] Or is this Antigravity artifact-specific? (e.g., carousel, diff blocks)
+- [ ] When in doubt, use standard Markdown + Slidev layouts only
+
 ## [2025-12-20] Task: Initial MVP Implementation & Testing Framework
 ### 1. Technical Explanation
 - **Changes**: 

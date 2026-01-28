@@ -457,22 +457,226 @@ Accuracy_loss ≈ 2-5%
 
 ---
 
-<LayoutTitleContent title="Incremental Sync">
+
+<LayoutDiagram title="Incremental Sync Flow">
+
+```mermaid
+flowchart LR
+    subgraph SCAN[" 1. SCAN PHASE"]
+        A[" Scan data/raw/ folder"]
+        B[" Load indexing_metadata.json"]
+        C[" Compute MD5 for each file"]
+    end
+    
+    subgraph CLASSIFY[" 2. CLASSIFICATION"]
+        D{" Compare with metadata"}
+        E[" New Files<br/>(not in metadata)"]
+        F[" Modified Files<br/>(hash changed)"]
+        G[" Deleted Files<br/>(not on disk)"]
+        H[" Unchanged Files<br/>(hash same)"]
+    end
+    
+    subgraph PROCESS[" 3. PROCESSING"]
+        I[" Delete old chunks"]
+        J[" Load + Split + Embed"]
+        K[" Add to FAISS index"]
+        L[" Update metadata"]
+        M[" Skip"]
+    end
+    
+    subgraph SAVE[" 4. SAVE"]
+        N[" Save vector store<br/>(faiss + pkl)"]
+        O[" Save metadata.json"]
+    end
+    
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    D --> F
+    D --> G
+    D --> H
+    E --> J
+    F --> I
+    I --> J
+    G --> I
+    H --> M
+    J --> K
+    K --> L
+    I --> L
+    L --> N
+    L --> O
+```
+
+</LayoutDiagram>
+
+---
+
+<LayoutTitleContent title="Data Structure: Folder Layout">
+
+### Cấu trúc vật lý
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                 INCREMENTAL SYNC                    │
-├─────────────────────────────────────────────────────┤
-│   New file added?     → Index only the new file    │
-│   File modified?      → Re-index that file only    │
-│   File deleted?       → Remove from index          │
-│   File unchanged?     → Skip (no processing)       │
-├─────────────────────────────────────────────────────┤
-│   Tracking: MD5 hash của mỗi file trong metadata   │
-└─────────────────────────────────────────────────────┘
+data/
+├── raw/                          
+│   ├── luat_lao_dong.pdf
+│   └── bo_luat_dan_su.pdf
+│
+└── vector_store/                 
+    ├── index.faiss               
+    ├── index.pkl                 
+    └── indexing_metadata.json    
 ```
 
-**Lợi ích:** Cập nhật luật mới rất nhanh, không cần re-index toàn bộ
+**Mục đích:** Tách biệt file nguồn và dữ liệu đã xử lý
+
+**Luồng dữ liệu:**
+- `data/raw/` → Tài liệu nguồn (PDF/DOCX)
+- `data/vector_store/` → Cơ sở tri thức đã index
+
+**Chi tiết các file trong vector_store:**
+- `indexing_metadata.json` → Theo dõi trạng thái file (hash, chunk IDs)
+- `index.faiss` → Lưu trữ embedding vectors (dữ liệu số để tìm kiếm)
+- `index.pkl` → Lưu trữ nội dung văn bản gốc (để hiển thị kết quả)
+
+</LayoutTitleContent>
+
+---
+
+<LayoutTitleContent title="Data Structure: Metadata JSON">
+
+### indexing_metadata.json
+
+```json
+{
+  "last_updated": "2026-01-27T10:30:15Z",
+  "files": {
+    "luat_lao_dong.pdf": {
+      "hash": "a1b2c3d4e5f6g7h8...",
+      "last_modified": 1706353815.234,
+      "chunk_ids": ["a1b2c3d4_0", "a1b2c3d4_1", "a1b2c3d4_2"]
+    },
+    "bo_luat_dan_su.pdf": {
+      "hash": "x9y8z7w6v5u4t3s2...",
+      "last_modified": 1706353820.456,
+      "chunk_ids": ["x9y8z7w6_0", ..., "x9y8z7w6_45"]
+    }
+  }
+}
+```
+
+**Các trường quan trọng:**
+- <FileBadge>hash</FileBadge>: MD5 để phát hiện thay đổi
+- <FileBadge>chunk_ids</FileBadge>: IDs của vectors trong FAISS
+
+</LayoutTitleContent>
+
+---
+
+<LayoutTitleContent title="Data Structure: index.faiss">
+
+### Cấu trúc dữ liệu trong FAISS
+
+```
+index.faiss (Binary file, ~4.5 MB)
+│
+├── FAISS Index Metadata
+│   ├── Index Type: IVFFlat (hoặc Flat)
+│   ├── Dimension: 768
+│   ├── Total vectors: 1,500
+│   └── nlist: 50 (số clusters cho IVF)
+│
+└── Vector Data
+    ├── Vector ID: "a1b2c3d4_0"
+    │   └── [0.123, -0.456, 0.789, ..., 0.234]  # 768 số float
+    │
+    ├── Vector ID: "a1b2c3d4_1"
+    │   └── [0.891, 0.234, -0.567, ..., 0.123]
+    │
+    └── ... (1,500 vectors total)
+```
+
+**Ví dụ 1 vector (đã rút gọn):**
+```python
+vector_id = "a1b2c3d4_0"
+embedding = [0.123, -0.456, 0.789, 0.234, ..., 0.891]  # 768 chiều
+```
+
+**Chức năng:** Tìm kiếm similarity nhanh bằng phép toán vector
+
+</LayoutTitleContent>
+
+---
+
+<LayoutTitleContent title="Data Structure: index.pkl">
+
+### Cấu trúc dữ liệu trong Pickle
+
+```python
+# index.pkl (Pickle file, ~2.1 MB)
+{
+  "docstore": {
+    # Key: chunk_id, Value: Document object
+    "a1b2c3d4_0": Document(
+      page_content="Điều 139. Nghỉ thai sản\n1. Người lao động nữ...",
+      metadata={
+        "source": "luat_lao_dong.pdf",
+        "page": 45,
+        "chunk_id": "a1b2c3d4_0"
+      }
+    ),
+    
+    "a1b2c3d4_1": Document(
+      page_content="được nghỉ thai sản trước và sau khi sinh...",
+      metadata={
+        "source": "luat_lao_dong.pdf",
+        "page": 45,
+        "chunk_id": "a1b2c3d4_1"
+      }
+    ),
+    
+    # ... (1,500 documents total)
+  },
+  
+  "index_to_docstore_id": {
+    0: "a1b2c3d4_0",
+    1: "a1b2c3d4_1",
+    2: "a1b2c3d4_2",
+    # ... mapping FAISS index position → chunk_id
+  }
+}
+```
+
+**Chức năng:** Lưu văn bản gốc để hiển thị kết quả
+
+</LayoutTitleContent>
+
+---
+
+<LayoutTitleContent title="Data Structure: Chunk ID Mapping">
+
+### Định dạng ID xác định
+
+```python
+# Ví dụ chunk trong FAISS
+chunk_id = "a1b2c3d4_0"
+         = [file_hash]_[chunk_index]
+```
+
+### Ánh xạ tới Document
+
+```python
+Document(
+    page_content="Điều 139. Nghỉ thai sản...",
+    metadata={
+        "source": "luat_lao_dong.pdf",
+        "page": 45,
+        "chunk_id": "a1b2c3d4_0"
+    }
+)
+```
+
+**Cho phép:** Xoá chính xác theo chunk ID khi cập nhật
 
 </LayoutTitleContent>
 
