@@ -216,7 +216,6 @@ Query: "nghỉ thai sản mấy tháng?"
 - ✅ **100% accuracy**
 - ❌ Slower with large data
 - Brute-force comparison
-- O(N) complexity
 
 </template>
 
@@ -235,7 +234,6 @@ Query: "nghỉ thai sản mấy tháng?"
 - ✅ **~97% accuracy**
 - ✅ **5-10x faster**
 - K-means clustering
-- O(log N) complexity
 
 </template>
 
@@ -282,15 +280,22 @@ flowchart LR
 
 **K-means Steps:**
 
-1. **Initialize** 64 random centroids
-2. **Assign** mỗi vector → nearest centroid
-3. **Update** centroids = mean của assigned vectors
-4. **Repeat** steps 2-3 cho đến khi converge
+1. **Initialize:** Chọn 64 điểm ngẫu nhiên làm centroids ban đầu
+
+2. **Assign:** Gán mỗi vector vào centroid gần nhất
+3. **Update:** Tính lại centroid = trung bình của các vectors trong cluster
+4. **Repeat:** Lặp lại 2-3 cho đến khi converge (centroids không thay đổi nhiều)
 
 **Training Cost:**
 - Chỉ chạy 1 lần khi build index
 - ~10-30 iterations để converge
-- Time: O(N × K × D × iterations)
+- Time: O(N × K × D × iterations) 
+- Trong đó:
+    - N: Tổng số vectors
+    - K: Số clusters (nlist)
+    - D: Số chiều của vector
+    - iterations: Số lần lặp
+
 
 </template>
 
@@ -313,7 +318,7 @@ index.add(embeddings)
 **Điều chỉnh nlist:**
 - Nhỏ → Faster training, slower search
 - Lớn → Slower training, faster search
-- Rule of thumb: <FileBadge>nlist ≈ √N</FileBadge>
+- Rule of thumb: <FileBadge>nlist ≈ √N</FileBadge> Với 1500 vectors, √1500 ≈ 39, nên 64 là hợp lý. (FAISS thường hoạt động hiệu quả hơn với các số là lũy thừa của 2)
 
 </template>
 
@@ -378,8 +383,7 @@ flowchart LR
 
 **Key Findings:**
 - **IVF64 (nprobe=8)**: **2.5x faster** với **~98% accuracy** → Best trade-off
-- **Memory overhead**: Minimal (~7% cho 64 centroids)
-- **Training time**: ~2s cho 1,500 vectors
+- **Memory overhead**: Chỉ tốn thêm ~7% memory 
 
 </LayoutTitleContent>
 
@@ -389,7 +393,7 @@ flowchart LR
 
 <template #left>
 
-### ✅ Sử dụng IVF khi:
+### Sử dụng IVF khi:
 
 - Dataset **> 10,000 vectors**
 - Cần **low latency** (< 50ms)
@@ -405,19 +409,13 @@ flowchart LR
 
 <template #right>
 
-### ❌ Dùng Flat khi:
+### Dùng Flat khi:
 
 - Dataset nhỏ (< 10,000)
 - Cần **100% accuracy**
 - Không quan tâm latency
 - Development/testing
-- Không train được (< nlist vectors)
 
-**Trade-off equation:**
-```
-Speed_gain = N / (nlist × nprobe)
-Accuracy_loss ≈ 2-5%
-```
 
 </template>
 
@@ -432,20 +430,20 @@ Accuracy_loss ≈ 2-5%
 flowchart LR
     subgraph SCAN[" 1. SCAN PHASE"]
         A[" Scan data/raw/ folder"]
-        B[" Load indexing_metadata.json"]
-        C[" Compute MD5 for each file"]
+        B[" Load indexing_metadata.json tracking trạng thái trước đó"]
+        C[" Tính MD5 hash cho mỗi file"]
     end
     
     subgraph CLASSIFY[" 2. CLASSIFICATION"]
-        D{" Compare with metadata"}
+        D{" So sánh hash hiện tại với hash trong metadata"}
         E[" New Files<br/>(not in metadata)"]
-        F[" Modified Files<br/>(hash changed)"]
-        G[" Deleted Files<br/>(not on disk)"]
-        H[" Unchanged Files<br/>(hash same)"]
+        F[" Modified Files<br/>(hash khác)"]
+        G[" Deleted Files<br/>(không còn trên disk)"]
+        H[" Unchanged Files<br/>(hash giống)"]
     end
     
     subgraph PROCESS[" 3. PROCESSING"]
-        I[" Delete old chunks"]
+        I[" Xóa các chunks cũ"]
         J[" Load + Split + Embed"]
         K[" Add to FAISS index"]
         L[" Update metadata"]
@@ -541,41 +539,6 @@ data/
 
 ---
 
-<LayoutTitleContent title="Data Structure: index.faiss">
-
-### Cấu trúc dữ liệu trong FAISS
-
-```
-index.faiss (Binary file, ~4.5 MB)
-│
-├── FAISS Index Metadata
-│   ├── Index Type: IVFFlat (hoặc Flat)
-│   ├── Dimension: 768
-│   ├── Total vectors: 1,500
-│   └── nlist: 50 (số clusters cho IVF)
-│
-└── Vector Data
-    ├── Vector ID: "a1b2c3d4_0"
-    │   └── [0.123, -0.456, 0.789, ..., 0.234]  # 768 số float
-    │
-    ├── Vector ID: "a1b2c3d4_1"
-    │   └── [0.891, 0.234, -0.567, ..., 0.123]
-    │
-    └── ... (1,500 vectors total)
-```
-
-**Ví dụ 1 vector (đã rút gọn):**
-```python
-vector_id = "a1b2c3d4_0"
-embedding = [0.123, -0.456, 0.789, 0.234, ..., 0.891]  # 768 chiều
-```
-
-**Chức năng:** Tìm kiếm similarity nhanh bằng phép toán vector
-
-</LayoutTitleContent>
-
----
-
 <LayoutTitleContent title="Data Structure: index.pkl">
 
 ### Cấu trúc dữ liệu trong Pickle
@@ -618,3 +581,52 @@ embedding = [0.123, -0.456, 0.789, 0.234, ..., 0.891]  # 768 chiều
 **Chức năng:** Lưu văn bản gốc để hiển thị kết quả
 
 </LayoutTitleContent>
+
+---
+<LayoutComparison title="Data Structure: index.faiss" leftTitle="Flat Index" rightTitle="IVF Index">
+
+<template #left>
+
+**Cấu trúc đơn giản**
+
+```
+index.faiss (~4.5 MB)
+│
+├── Metadata
+│   ├── Type: IndexFlatL2
+│   └── Dimension: 768
+│
+└── Vector Data
+    ├── [0.12, -0.34, ...]
+    ├── [0.89, 0.23, ...]
+    └── ... (1,500 vectors)
+```
+
+</template>
+
+<template #right>
+
+**Cấu trúc có clustering**
+    
+```
+index.faiss (~4.8 MB)
+│
+├── Metadata
+│   ├── Type: IndexIVFFlat
+│   ├── Dimension: 768
+│   └── nlist: 64
+│
+├── Centroids (64 × 768 floats)
+│   ├── C0: [0.15, -0.23, ...]
+│   └── C63: [0.31, 0.18, ...]
+│
+├── Inverted Lists
+│   ├── Cluster 0 → [id5, id23]
+│   └── Cluster 63 → [id12, id45]
+│
+└── Vector Data (1,500 vectors)
+```
+
+</template>
+
+</LayoutComparison>

@@ -106,6 +106,7 @@ flowchart LR
     UI --> DB
     RAG --> FAISS
     RAG --> Groq
+    RAG --> SQLite
     ING --> FAISS
     ING --> HF
     DB --> SQLite

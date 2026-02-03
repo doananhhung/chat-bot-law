@@ -35,7 +35,7 @@ class AppConfig:
 
     # --- FAISS Index Configuration ---
     # Index type: "flat" (exact search), "ivf" (approximate), "ivfpq" (approximate + compression)
-    VECTOR_INDEX_TYPE = os.getenv("VECTOR_INDEX_TYPE", "flat")
+    VECTOR_INDEX_TYPE = os.getenv("VECTOR_INDEX_TYPE", "ivf")
 
     # IVF-specific parameters
     IVF_NLIST = int(os.getenv("IVF_NLIST", "64"))    # Number of clusters (Voronoi cells)
