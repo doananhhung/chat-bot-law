@@ -111,10 +111,10 @@ Relationship là 1:N - một session có nhiều messages."
 | Bước | Nội dung | Mục đích |
 |------|----------|----------|
 | 1 | Giới thiệu giao diện | Show layout |
-| 2 | Câu hỏi pháp lý đầu tiên | Show RAG + citations |
-| 3 | Follow-up question | Show query rewriting |
-| 4 | General chat | Show intent routing |
-| 5 | Session management | Show persistence |
+| 2 | Câu hỏi chung chung | Show intent routing |
+| 3 | Câu hỏi pháp lý đầu tiên | Show RAG + citations |
+| 4 | Câu hỏi liên quan | Show query rewriting |
+| 5 | Quản lý hội thoại | Show persistence |
 
 </LayoutTitleContent>
 
