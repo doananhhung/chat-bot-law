@@ -11,68 +11,6 @@
 
 ---
 
-<LayoutComparison title="Keyword vs Semantic Search" leftTitle="Keyword Search" rightTitle="Semantic Search">
-
-<template #left>
-
-### Exact Word Matching
-
-```
-Query: "nghỉ đẻ được mấy tháng?"
-
-❌ Không match "thai sản"
-❌ Miss relevant documents
-```
-
-- Chỉ tìm **exact words**
-- Miss: "nghỉ đẻ", "maternity"
-
-</template>
-
-<template #right>
-
-### Meaning-based Matching
-
-```
-Query: "nghỉ đẻ được mấy tháng?"
-
-✅ Match "nghỉ thai sản"
-✅ Match "sinh con"
-```
-
-- Hiểu **ý nghĩa/khái niệm**
-- Catch tất cả related terms
-
-</template>
-
-</LayoutComparison>
-
----
-
-<LayoutTitleContent title="SemanticRetriever Class">
-
-```python
-# src/rag_engine/retriever.py
-class SemanticRetriever:
-    def __init__(self):
-        self.embeddings = HuggingFaceEmbeddings(...)  # vietnamese-bi-encoder
-        self.vector_store = FAISS.load_local(...)     # FAISS index
-    
-    def get_relevant_docs(self, query: str, k: int = 10):
-        """Retrieve top-k relevant documents."""
-        docs = self.vector_store.similarity_search(query, k=k)
-        return docs
-```
-
-| Parameter | Giá trị | Ý nghĩa |
-|-----------|---------|---------|
-| **k** | 10 | Lấy top 10 documents liên quan nhất |
-| **Search** | similarity_search | Dựa trên cosine similarity |
-
-</LayoutTitleContent>
-
----
-
 <LayoutComparison title="Intent Routing" leftTitle="Without Router" rightTitle="With Router">
 
 <template #left>
@@ -153,33 +91,33 @@ Câu hỏi: {question}
 
 ---
 
-<LayoutDiagram title="Query Rewriting">
+<LayoutTitleContent title="General Response Prompt">
 
-```mermaid
-flowchart LR
-    subgraph Solution["GIẢI PHÁP"]
-        E["Original: 'Còn nam thì sao?'"]
-        F["🧠 Query Rewriting"]
-        G["Rewritten: 'Lao động nam có được nghỉ thai sản không?'"]
-        H["✅ Câu hỏi rõ ràng!"]
-    end
-    
-    subgraph Problem["VẤN ĐỀ"]
-        A["User: 'Thai sản nghỉ mấy tháng?'"]
-        B["AI: 'Lao động nữ được nghỉ 6 tháng...'"]
-        C["User: 'Còn nam thì sao?'"]
-        D["❌ Câu hỏi thiếu context!"]
-    end
-    
-    A --> B --> C --> D
-    E --> F --> G --> H
+```python
+GENERAL_SYSTEM_PROMPT = """
+Bạn là Trợ lý Pháp luật AI chuyên về luật lao động VN.
+Người dùng vừa đưa ra câu chào xã giao.
+
+Nhiệm vụ:
+1. Dựa vào [LỊCH SỬ] để hiểu ngữ cảnh.
+2. Phản hồi lịch sự, thân thiện, ngắn gọn.
+3. Nếu hỏi về thông tin cá nhân → trả lời từ lịch sử.
+4. LUÔN hướng người dùng quay lại chủ đề pháp luật.
+
+[LỊCH SỬ TRÒ CHUYỆN]
+{chat_history}
+
+[CÂU HỎI CỦA NGƯỜI DÙNG]
+{question}
+
+[CÂU TRẢ LỜI CỦA BẠN]"""
 ```
 
-</LayoutDiagram>
+</LayoutTitleContent>
 
 ---
 
-<LayoutTitleContent title="System Prompt - AI Definition">
+<LayoutTitleContent title="LEGAL Response Prompt">
 
 ```python
 QA_SYSTEM_PROMPT = """
@@ -241,6 +179,60 @@ Bạn được nghỉ **6 tháng**.
 
 ---
 
+<LayoutDiagram title="Query Rewriting">
+
+```mermaid
+flowchart LR
+    subgraph Solution["GIẢI PHÁP"]
+        E["Original: 'Còn nam thì sao?'"]
+        F["🧠 Query Rewriting"]
+        G["Rewritten: 'Lao động nam có được nghỉ thai sản không?'"]
+        H["✅ Câu hỏi rõ ràng!"]
+    end
+    
+    subgraph Problem["VẤN ĐỀ"]
+        A["User: 'Thai sản nghỉ mấy tháng?'"]
+        B["AI: 'Lao động nữ được nghỉ 6 tháng...'"]
+        C["User: 'Còn nam thì sao?'"]
+        D["❌ Câu hỏi thiếu context!"]
+    end
+    
+    A --> B --> C --> D
+    E --> F --> G --> H
+```
+
+</LayoutDiagram>
+
+---
+
+<LayoutTitleContent title="Query Rewriting Prompt">
+
+```python
+CONDENSE_QUESTION_SYSTEM_PROMPT = """
+Bạn là một chuyên gia ngôn ngữ.
+Nhiệm vụ: Viết lại câu hỏi thành câu hỏi ĐỘC LẬP.
+
+YÊU CẦU:
+1. KHÔNG trả lời câu hỏi. CHỈ viết lại.
+2. Câu hỏi phải đầy đủ chủ ngữ, vị ngữ.
+3. Thay đại từ (nó, cái đó...) bằng danh từ cụ thể.
+4. Nếu câu hỏi đã rõ → chép lại y nguyên.
+5. KHÔNG thêm "Người dùng muốn biết..."
+
+[LỊCH SỬ TRÒ CHUYỆN]
+{chat_history}
+
+[CÂU HỎI MỚI]
+{question}
+
+[CÂU HỎI ĐỘC LẬP]"""
+```
+
+</LayoutTitleContent>
+
+
+---
+
 <LayoutTwoCol title="Context ">
 
 <template #left>
@@ -282,14 +274,6 @@ Bạn được nghỉ **6 tháng**.
 </template>
 
 </LayoutTwoCol>
-
-<!--
-"Hai context quan trọng:
-
-1. Query Rewriting: Chỉ lấy role và content từ database để tạo chat_history. Không cần sources hay timestamp vì LLM chỉ cần hiểu ngữ cảnh hội thoại.
-
-2. RAG Generation: Dùng context từ Vector Search (các đoạn văn bản pháp luật) và câu hỏi đã được rewrite."
--->
 
 ---
 

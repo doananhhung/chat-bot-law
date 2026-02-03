@@ -21,16 +21,7 @@
 | **Search Mode** | Chọn quality/balanced/speed |
 | **Data Update** | Button cập nhật index khi có luật mới |
 
-```python
-# Hiển thị nguồn tham khảo
-with st.expander("📚 Nguồn tham khảo"):
-    for doc in sources:
-        st.caption(f"📄 {doc.source} (Trang {doc.page})")
 
-# Hiển thị query rewriting
-with st.expander("🧠 Tư duy ngữ cảnh"):
-    st.info(f"AI đã hiểu: **{standalone_query}**")
-```
 
 </LayoutTitleContent>
 
@@ -125,15 +116,6 @@ Relationship là 1:N - một session có nhiều messages."
 | 4 | General chat | Show intent routing |
 | 5 | Session management | Show persistence |
 
-### Demo Questions
-
-```
-1. "Thai sản được nghỉ bao nhiêu ngày?"
-2. "Còn nam thì sao?"
-3. "Xin chào, tên tôi là Hùng"
-4. "Tên tôi là gì?"
-```
-
 </LayoutTitleContent>
 
 ---
@@ -147,7 +129,11 @@ Relationship là 1:N - một session có nhiều messages."
 | **RAG Engine** | Phúc | Semantic Search, Prompts |
 | **Frontend & DB** | Hùng | Streamlit, SQLite, Caching |
 
-### Kết quả đạt được
+</LayoutTitleContent>
+
+---
+
+<LayoutTitleContent title="Result">
 
 | Metric | Kết quả |
 |--------|---------|
@@ -155,7 +141,7 @@ Relationship là 1:N - một session có nhiều messages."
 | **Accuracy** | Có trích dẫn nguồn verify được |
 | **User Experience** | Chat tự nhiên, nhớ context |
 | **Maintainability** | Cập nhật luật mới dễ dàng |
-
+ 
 </LayoutTitleContent>
 
 ---
