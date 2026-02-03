@@ -4,7 +4,7 @@
   >
     <ThemeBackground />
     <div
-      class="relative z-10 h-full flex flex-col items-center justify-center text-center p-8 border-t-8 border-indigo-600"
+      class="relative z-10 h-full flex flex-col items-center justify-center text-center p-8 border-t-4 border-indigo-600"
     >
       <div
         class="bg-white/70 backdrop-blur-md p-16 rounded-2xl shadow-2xl border border-white/50 relative overflow-hidden"

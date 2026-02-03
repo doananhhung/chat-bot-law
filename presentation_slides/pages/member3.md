@@ -5,7 +5,7 @@
 
 **Từ Search Results → Câu Trả Lời Thông Minh**
 
-👤 Member 3
+👤 Phúc
 
 </LayoutSection>
 
@@ -179,29 +179,6 @@ flowchart LR
 
 ---
 
-<LayoutTitleContent title="What is Prompt Engineering?">
-
-| Khái niệm | Giải thích |
-|-----------|------------|
-| **Prompt** | Input text gửi cho LLM |
-| **Engineering** | Thiết kế prompt để nhận output chất lượng cao |
-
-```
-Same LLM, Different Prompts:
-
-Prompt 1: "Nói về thai sản"
-→ "Thai sản là quá trình mang thai và sinh con..."
-   ❌ Generic, không focus pháp lý
-
-Prompt 2: "Bạn là Cố vấn Pháp lý AI. Dựa trên tài liệu sau..."
-→ "Theo Điều 139 Bộ luật Lao động, lao động nữ được nghỉ..."
-   ✅ Professional, có trích dẫn nguồn
-```
-
-</LayoutTitleContent>
-
----
-
 <LayoutTitleContent title="System Prompt - AI Definition">
 
 ```python
@@ -261,6 +238,58 @@ Bạn được nghỉ **6 tháng**.
 </template>
 
 </LayoutTwoCol>
+
+---
+
+<LayoutTwoCol title="Context ">
+
+<template #left>
+
+### Query Rewriting
+
+```python
+# Input cho Rewriter LLM
+{
+    "chat_history": chat_history_str,
+    "question": query
+}
+```
+
+| Input | Source |  
+|-------|---------|
+| `chat_history_str` | role + content |
+
+
+</template>
+
+<template #right>
+
+### RAG Generation
+
+```python
+# Input cho Generator LLM
+{
+    "context": format_context(docs),
+    "question": standalone_query
+}
+```
+
+| Input | Source |
+|-------|--------|
+| `context` | Vector Search |
+| `question` | Rewriter output |
+
+</template>
+
+</LayoutTwoCol>
+
+<!--
+"Hai context quan trọng:
+
+1. Query Rewriting: Chỉ lấy role và content từ database để tạo chat_history. Không cần sources hay timestamp vì LLM chỉ cần hiểu ngữ cảnh hội thoại.
+
+2. RAG Generation: Dùng context từ Vector Search (các đoạn văn bản pháp luật) và câu hỏi đã được rewrite."
+-->
 
 ---
 
@@ -325,20 +354,4 @@ LLM_MODEL_NAME=gemini-2.5-flash-lite
 
 </LayoutTwoCol>
 
----
 
-<LayoutTitleContent title="RAG Engine Summary">
-
-| Chủ đề | Điểm chính |
-|--------|------------|
-| **Semantic Search** | Hiểu nghĩa, không chỉ keyword |
-| **Intent Router** | LEGAL vs GENERAL, skip search khi không cần |
-| **Query Rewriting** | Biến follow-up thành standalone question |
-| **Prompt Engineering** | IRAC structure, Chain-of-Thought, anti-hallucination |
-| **LLM Factory** | Multi-provider, easy switching |
-
-**Tiếp theo:** Member 4 - Frontend, Database & Demo
-
-*"Trải nghiệm người dùng như thế nào?"*
-
-</LayoutTitleContent>

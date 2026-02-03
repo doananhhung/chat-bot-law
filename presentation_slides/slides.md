@@ -16,6 +16,9 @@ mermaid:
 <LayoutTitle title="Chat Bot Law" subtitle="Technical Deep-Dive & Architecture Overview" />
 
 ---
+src: ./pages/timeline.md
+---
+---
 src: ./pages/member1.md
 ---
 ---
@@ -27,7 +30,4 @@ src: ./pages/member3.md
 ---
 src: ./pages/member4.md
 ---
----
-<LayoutSection title="Q&A">
-  <div><a href="./docs/">View Documentation</a></div>
-</LayoutSection>
+

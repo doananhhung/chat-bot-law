@@ -1,0 +1,39 @@
+/* 
+ * Global Slidev Style Overrides
+ * Giảm padding và tối ưu hiển thị diagram
+ */
+
+/* Giảm padding của slide content */
+.slidev-layout {
+  padding: 1rem 1.5rem !important;
+}
+
+/* Mermaid diagram full width */
+.mermaid {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+.mermaid svg {
+  max-width: 100% !important;
+  width: 100% !important;
+  height: auto !important;
+}
+
+/* LayoutDiagram component - no extra padding */
+[class*="layout-diagram"] .mermaid,
+.diagram-container .mermaid {
+  padding: 0 !important;
+  margin: 0 auto !important;
+}
+
+/* Sequence diagram specific - expand width */
+.mermaid .sequenceDiagram {
+  width: 100% !important;
+}
+
+/* Remove extra margins on diagram slides */
+.slidev-layout.diagram,
+.slidev-layout[class*="diagram"] {
+  padding: 0.5rem 1rem !important;
+}

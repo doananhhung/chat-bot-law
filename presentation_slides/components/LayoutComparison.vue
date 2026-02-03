@@ -4,7 +4,7 @@
   >
     <ThemeBackground />
     <div
-      class="relative z-10 h-full p-6 border-t-8 border-indigo-600 flex flex-col"
+      class="relative z-10 h-full p-6 border-t-4 border-indigo-600 flex flex-col"
     >
       <h1
         class="text-3xl font-extrabold tracking-tight uppercase text-center bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-purple-700 mb-4 shrink-0"

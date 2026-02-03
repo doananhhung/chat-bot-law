@@ -139,10 +139,9 @@ try:
 
     # Sidebar
     with st.sidebar:
-        st.header("🗂️ Quản lý Hội thoại")
 
-        if st.button("➕ Cuộc hội thoại mới", use_container_width=True):
-            new_session = repo.create_session(title="Cuộc hội thoại mới")
+        if st.button("➕ New chat", use_container_width=True):
+            new_session = repo.create_session(title="No tittle")
             st.session_state.session_id = new_session.id
             st.rerun()
 
@@ -157,7 +156,7 @@ try:
                 # Highlight active session
                 button_type = "primary" if s.id == st.session_state.session_id else "secondary"
                 label = s.title if s.title else "Không tiêu đề"
-                if st.button(f"💬 {label}", key=f"nav_{s.id}", type=button_type, use_container_width=True):
+                if st.button(f" {label}", key=f"nav_{s.id}", type=button_type, use_container_width=True):
                     st.session_state.session_id = s.id
                     st.rerun()
 
@@ -166,14 +165,14 @@ try:
                     handle_delete_session(repo, s.id)
 
         st.divider()
-        with st.expander("⚙️ Quản lý Dữ liệu"):
+        with st.expander("Quản lý Dữ liệu"):
             st.info(f"Nguồn: `{AppConfig.RAW_DATA_PATH}`")
             if st.button("🔄 Cập nhật Index"):
                 build_index()
 
             st.divider()
 
-            if st.button("🔥 Xóa toàn bộ dữ liệu chat", type="primary", use_container_width=True):
+            if st.button("Xóa toàn bộ dữ liệu chat", type="primary", use_container_width=True):
                 handle_delete_all_sessions(repo)
 
         # Search Mode Selector
@@ -181,14 +180,14 @@ try:
         if retriever:
             mode_info = retriever.get_current_search_mode()
             if mode_info.get("is_ivf"):
-                with st.expander("⚡ Chế độ tìm kiếm"):
+                with st.expander("Chế độ tìm kiếm"):
                     search_mode = st.radio(
                         "Chọn chế độ:",
                         options=["balanced", "quality", "speed"],
                         format_func=lambda x: {
-                            "quality": "🎯 Chính xác cao",
-                            "balanced": "⚖️ Cân bằng (Khuyến nghị)",
-                            "speed": "🚀 Tốc độ cao"
+                            "quality": "🎯 quality",
+                            "balanced": "⚖️ balanced",
+                            "speed": "🚀 speed"
                         }[x],
                         index=["balanced", "quality", "speed"].index(st.session_state.search_mode),
                         key="search_mode_radio",
@@ -203,9 +202,9 @@ try:
 
                     # Display current mode info
                     current_info = retriever.get_current_search_mode()
-                    st.caption(f"📊 Phạm vi: {current_info['search_scope_pct']}% clusters ({current_info['nprobe']}/{current_info['nlist']})")
+                    st.caption(f" Phạm vi: {current_info['search_scope_pct']}% clusters ({current_info['nprobe']}/{current_info['nlist']})")
             else:
-                with st.expander("⚡ Chế độ tìm kiếm"):
+                with st.expander("Chế độ tìm kiếm"):
                     st.info("Index hiện tại là Flat (tìm kiếm chính xác), không cần điều chỉnh.")
 
     # Main Chat Area

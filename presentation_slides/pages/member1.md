@@ -9,9 +9,7 @@
 
 <div class="my-8 border-t border-slate-300 opacity-50 w-24"></div>
 
-👤 Member 1: Giới thiệu & Kiến trúc
-
-📅 27/01/2026
+👤 Giang: Giới thiệu & Kiến trúc
 
 </LayoutSection>
 
@@ -79,14 +77,6 @@ Câu hỏi → Tìm kiếm (FAISS) → Context
 
 ---
 
-<LayoutSection title="Architecture Overview">
-
-**Modular Monolith Architecture**
-
-</LayoutSection>
-
----
-
 <LayoutDiagram title="System Architecture">
 
 ```mermaid
@@ -125,30 +115,40 @@ flowchart LR
 
 ---
 
-<LayoutDiagram title="Query Processing Flow">
+<LayoutDiagram title="Complete Query Processing Flow">
 
 ```mermaid
 sequenceDiagram
     participant User as 👤 User
     participant UI as 🖥️ UI
+    participant DB as 💾 Database
+    participant Rewriter as ✏️ Rewriter
     participant Router as 🔀 Router
-    participant RAG as 🤖 RAG
     participant VDB as 🔍 FAISS
-    participant LLM as ☁️ Groq
+    participant LLM as ☁️ Generator
 
-    User->>UI: "Thai sản nghỉ mấy tháng?"
+    User->>UI: "Còn nam thì sao?"
+    UI->>DB: get_messages(session_id)
+    DB-->>UI: [role + content only]
+    
+    rect rgb(255, 245, 200)
+        Note over UI,Rewriter: Chỉ khi có history
+        UI->>Rewriter: {chat_history, question}
+        Rewriter-->>UI: standalone_query
+    end
+    
     UI->>Router: Classify Intent
-    Router->>LLM: LEGAL or GENERAL?
-    LLM-->>Router: LEGAL
     
-    Router->>RAG: Process Query
-    RAG->>VDB: Similarity Search
-    VDB-->>RAG: Top 10 chunks
+    alt LEGAL
+        UI->>VDB: embed(standalone_query)
+        VDB-->>UI: Top 10 chunks
+        UI->>LLM: {context: docs, question}
+        LLM-->>UI: Answer + Citations
+    else GENERAL
+        UI->>LLM: {chat_history, question}
+        LLM-->>UI: Direct Response
+    end
     
-    RAG->>LLM: Context + Question
-    LLM-->>RAG: Structured Answer
-    
-    RAG-->>UI: Answer + Citations
     UI-->>User: Display Result
 ```
 
@@ -204,20 +204,4 @@ src/rag_engine/
 
 </LayoutTitleContent>
 
----
 
-<LayoutTitleContent title="Introduction Summary">
-
-| CHỦ ĐỀ | ĐIỂM CHÍNH |
-|--------|------------|
-| **Vấn đề** | Tra cứu luật thủ công, thiếu ngữ cảnh, không có nguồn |
-| **Giải pháp** | RAG = Retrieval + Generation |
-| **Kiến trúc** | Modular Monolith với Clean Architecture |
-| **Luồng xử lý** | Router → Retrieval → Generation → Citation |
-| **Tech Stack** | Streamlit, LangChain, FAISS, Groq |
-
-**Tiếp theo:** Member 2 - Data Ingestion & Vector Database
-
-*"Làm sao chuyển PDF thành searchable data?"*
-
-</LayoutTitleContent>

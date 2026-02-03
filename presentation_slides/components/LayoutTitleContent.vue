@@ -4,13 +4,13 @@
   >
     <ThemeBackground />
     <div
-      class="relative z-10 h-full p-6 border-t-8 border-indigo-600 grid grid-rows-[auto_1fr] gap-4"
+      class="relative z-10 h-full p-6 border-t-4 border-indigo-600 grid grid-rows-[auto_1fr] gap-4"
     >
       <h1
         class="text-3xl font-extrabold tracking-tight uppercase flex items-center gap-3"
       >
         <div
-          class="w-2 h-10 bg-gradient-to-b from-indigo-600 to-purple-600 rounded-sm"
+          class="w-1.5 h-8 bg-gradient-to-b from-indigo-600 to-purple-600 rounded-sm"
         ></div>
         <span
           class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-purple-700"

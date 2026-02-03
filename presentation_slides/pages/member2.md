@@ -5,7 +5,7 @@
 
 **Từ PDF → Searchable Knowledge Base**
 
-👤 Member 2
+👤 Hiệp
 
 </LayoutSection>
 
@@ -100,7 +100,7 @@ Sau khi Split (5 chunks):
 
 ---
 
-<LayoutTitleContent title="RecursiveCharacterTextSplitter">
+<LayoutTitleContent title="Text Splitter">
 
 ```python
 # src/ingestion/splitter.py
@@ -385,38 +385,6 @@ flowchart LR
 
 ---
 
-<LayoutDiagram title="Accuracy vs Speed Trade-off">
-
-```mermaid
-%%{init: {'theme':'base', 'themeVariables': {'fontSize':'14px'}}}%%
-graph LR
-    subgraph ACCURACY[" ACCURACY"]
-        A1["Flat: 100%"]
-        A2["IVF nprobe=16: 99.1%"]
-        A3["IVF nprobe=8: 97.8%"]
-        A4["IVF nprobe=4: 95.2%"]
-    end
-    
-    subgraph SPEED[" SPEED"]
-        S1["Flat: 45ms"]
-        S2["IVF nprobe=16: 28ms"]
-        S3["IVF nprobe=8: 18ms"]
-        S4["IVF nprobe=4: 12ms"]
-    end
-    
-    A1 -.-> S1
-    A2 -.-> S2
-    A3 -.-> S3
-    A4 -.-> S4
-    
-    style A3 fill:#90EE90
-    style S3 fill:#90EE90
-```
-
-</LayoutDiagram>
-
----
-
 <LayoutTwoCol title="When to Use IVF?">
 
 <template #left>
@@ -648,24 +616,5 @@ embedding = [0.123, -0.456, 0.789, 0.234, ..., 0.891]  # 768 chiều
 ```
 
 **Chức năng:** Lưu văn bản gốc để hiển thị kết quả
-
-</LayoutTitleContent>
-
----
-
-<LayoutTitleContent title="Data Ingestion Summary">
-
-| Chủ đề | Điểm chính |
-|--------|------------|
-| **Pipeline** | Load → Split → Embed → Store |
-| **Chunking** | 1000 chars, 200 overlap, recursive splitting |
-| **Embedding** | vietnamese-bi-encoder, 768D, tiếng Việt |
-| **FAISS** | IVF index, ~97% accuracy, fast search |
-| **Sync** | Incremental, chỉ xử lý file thay đổi |
-
-### 
-**Tiếp theo:** Member 3 - RAG Engine & LLM Integration
-
-*"Làm sao biến search results thành câu trả lời?"*
 
 </LayoutTitleContent>
